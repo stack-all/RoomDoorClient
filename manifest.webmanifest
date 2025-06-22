@@ -1,0 +1,1 @@
+{"name":"蓝牙门锁控制器","short_name":"蓝牙开锁","start_url":"/","display":"standalone","background_color":"#ffffff","lang":"en","scope":"/","description":"通过蓝牙控制门锁开关","theme_color":"#4f46e5","orientation":"portrait","icons":[{"src":"pwa-192x192.png","sizes":"192x192","type":"image/png"},{"src":"pwa-512x512.png","sizes":"512x512","type":"image/png"}]}
