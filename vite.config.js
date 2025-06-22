@@ -3,6 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+    // GitHub Pages部署配置
+    base: '/RoomDoorClient/',
     plugins: [
         vue(),
         VitePWA({
