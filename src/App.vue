@@ -77,9 +77,7 @@
           <span v-if="isConnecting" class="spinner"></span>
           {{ isConnecting ? '连接中...' : '连接门锁' }}
         </button>
-      </div>
-
-      <div v-else class="control-section">
+      </div>      <div v-else class="control-section">
         <div class="form-group">
           <div class="device-info">
             <div class="device-name">{{ connectedDevice?.name || '已连接设备' }}</div>
@@ -87,14 +85,25 @@
           </div>
         </div>
 
+        <!-- 挑战数据状态显示 -->
+        <div class="form-group">
+          <div class="challenge-status">
+            <span class="status-indicator" :class="challengeStatusClass"></span>
+            <span class="status-text">{{ challengeStatusText }}</span>
+          </div>
+          <div v-if="challengeData" class="challenge-data">
+            挑战数据: {{ challengeData }}
+          </div>
+        </div>
+
         <button 
           @click="openDoor" 
-          :disabled="isUnlocking"
+          :disabled="isUnlocking || !challengeData"
           class="btn btn-success"
           style="margin-bottom: 12px; font-size: 18px; padding: 16px;"
         >
           <span v-if="isUnlocking" class="spinner"></span>
-          {{ isUnlocking ? '开锁中...' : '🔓 开门' }}
+          {{ isUnlocking ? '开锁中...' : (challengeData ? '🔓 开门' : '⏳ 等待挑战数据') }}
         </button>
 
         <button 
@@ -134,8 +143,7 @@ export default {
     const password = ref('')
     const message = ref('')
     const messageType = ref('info')
-    
-    const {
+      const {
       isConnected,
       isConnecting,
       isScanning,
@@ -143,6 +151,8 @@ export default {
       devices,
       selectedDevice,
       connectedDevice,
+      challengeData,
+      hasChallengeData,
       scanDevices,
       selectDevice,
       connect,
@@ -176,16 +186,25 @@ export default {
     const statusText = computed(() => {
       if (isConnected.value) return '已连接'
       if (isConnecting.value) return '连接中...'
-      return '未连接'
-    })
-
-    const canConnect = computed(() => {
+      return '未连接'    });    const canConnect = computed(() => {
       return selectedDevice.value && password.value.trim() && !isConnecting.value
-    })
+    });
 
     const messageClass = computed(() => {
       return `alert-${messageType.value}`
-    })
+    });
+
+    const challengeStatusClass = computed(() => {
+      if (hasChallengeData.value) return 'status-connected'
+      if (isConnected.value) return 'status-connecting'
+      return 'status-disconnected'
+    });
+
+    const challengeStatusText = computed(() => {
+      if (hasChallengeData.value) return '挑战数据已准备'
+      if (isConnected.value) return '等待挑战数据...'
+      return '未连接'
+    });
 
     const showMessage = (msg, type = 'info') => {
       message.value = msg
@@ -303,9 +322,8 @@ export default {
           } catch (error) {
             showMessage('自动连接失败，请手动连接', 'warning')
           }
-        }
-      }
-    })
+        }      }
+    });
 
     return {
       password,
@@ -319,6 +337,9 @@ export default {
       selectedDevice,
       connectedDevice,
       lastDevice,
+      challengeData,
+      challengeStatusClass,
+      challengeStatusText,
       statusClass,
       statusText,
       canConnect,
