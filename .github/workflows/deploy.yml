@@ -47,8 +47,8 @@ jobs:
       - name: 运行测试
         run: bun test
 
-    #   - name: 代码检查
-    #     run: bun lint
+      - name: 代码检查
+        run: bun lint
 
       - name: 构建项目
         run: bun run build:gh-pages
