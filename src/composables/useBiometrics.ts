@@ -84,14 +84,30 @@ export function useBiometrics() {
         throw new Error('创建生物识别凭据失败')
       }
 
-      // 使用 WebCrypto API 创建一个包装密钥
-      const wrappingKey = await crypto.subtle.generateKey(
+      // 使用固定的本地密钥材料来生成包装密钥
+      // 在生产环境中，应该使用更安全的密钥派生方案
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode('door-lock-biometric-key-2024'), // 固定的本地密钥材料
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      )
+
+      const wrappingKey = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: new TextEncoder().encode('door-lock-salt'),
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
         {
           name: 'AES-GCM',
           length: 256
         },
-        false, // 不可导出
-        ['wrapKey', 'unwrapKey']
+        false,
+        ['wrapKey']
       )
 
       // 创建临时密钥以包装原始密钥
@@ -176,10 +192,29 @@ export function useBiometrics() {
         throw new Error('生物识别认证失败')
       }
 
-      // 认证成功，重新创建包装密钥
-      // 注意：实际应用中需要更安全的密钥存储方案
-      // 这里为了演示简单处理
-      const wrappingKey = await crypto.subtle.generateKey(
+      // 生物识别认证成功
+      // 由于WebAuthn的限制，我们简化处理：
+      // 实际的密钥应该通过服务器验证签名后返回，或者使用其他安全存储方案
+      // 这里我们直接从加密存储中解密密钥（需要用户输入密码或使用设备密钥）
+      
+      // 临时解决方案：使用固定的本地包装密钥
+      // 在生产环境中，应该使用更安全的密钥派生方案
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode('door-lock-biometric-key-2024'), // 固定的本地密钥材料
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      )
+
+      const wrappingKey = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: new TextEncoder().encode('door-lock-salt'),
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
         {
           name: 'AES-GCM',
           length: 256
@@ -197,7 +232,7 @@ export function useBiometrics() {
           name: 'AES-GCM',
           iv: hexToUint8Array(credentialData.iv)
         },
-        { name: 'AES-ECB' },
+        { name: 'AES-GCM' },
         true,
         ['encrypt', 'decrypt']
       )
@@ -206,6 +241,7 @@ export function useBiometrics() {
       const keyBuffer = await crypto.subtle.exportKey('raw', unwrappedKey)
       return new Uint8Array(keyBuffer)
     } catch (err) {
+      console.error('生物识别认证解包失败:', err)
       error.value = err instanceof Error ? err.message : '认证失败'
       return null
     } finally {
