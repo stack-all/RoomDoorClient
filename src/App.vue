@@ -271,6 +271,10 @@
           <div>自动连接设置: {{ lockStore.deviceSettings.autoConnect ? '已启用' : '未启用' }}</div>
           <div>广告监听: {{ lockStore.bluetooth?.isWatchingAdvertisements ? '运行中' : '未运行' }}</div>
           <div>自动重连: {{ lockStore.bluetooth?.autoReconnectEnabled ? '已启用' : '未启用' }}</div>
+          <div>PWA可安装: {{ pwa.canInstall ? '是' : '否' }}</div>
+          <div>PWA已安装: {{ pwa.isInstalled ? '是' : '否' }}</div>
+          <div>PWA独立模式: {{ pwa.isStandalone ? '是' : '否' }}</div>
+          <div>PWA安装提示: {{ pwa.canInstall ? '有' : '无' }}</div>
         </div>
         <div class="mt-3 space-x-2 flex flex-wrap gap-2">
           <button @click="handleRequestChallenge" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">
@@ -292,6 +296,9 @@
             }"
           >
             {{ lockStore.bluetooth?.isWatchingAdvertisements ? '停止监听' : '启动监听' }}
+          </button>
+          <button @click="pwa.resetInstallState" class="px-3 py-1 bg-pink-500 text-white rounded text-xs">
+            重置PWA
           </button>
           <a href="/test-bluetooth.html" target="_blank" class="px-3 py-1 bg-gray-500 text-white rounded text-xs inline-block">
             测试蓝牙

@@ -27,11 +27,7 @@ export function usePWA() {
                         (window.navigator as any).standalone === true ||
                         document.referrer.includes('android-app://')
     
-    // 如果在独立模式下，认为已安装
-    if (isStandalone.value) {
-      isInstalled.value = true
-      canInstall.value = false
-    }
+    console.log('PWA 独立模式状态:', isStandalone.value)
   }
 
   /**
@@ -43,6 +39,10 @@ export function usePWA() {
       console.log('浏览器不支持 Service Worker')
       return
     }
+
+    // 重置状态
+    canInstall.value = false
+    isInstalled.value = false
 
     // 监听 beforeinstallprompt 事件
     window.addEventListener('beforeinstallprompt', (e: Event) => {
@@ -144,6 +144,16 @@ export function usePWA() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
   }
 
+  /**
+   * 重置 PWA 安装状态（用于调试）
+   */
+  const resetInstallState = () => {
+    isInstalled.value = false
+    canInstall.value = false
+    installPrompt.value = null
+    console.log('PWA 安装状态已重置')
+  }
+
   onMounted(() => {
     checkStandalone()
     checkInstallability()
@@ -155,6 +165,7 @@ export function usePWA() {
     isStandalone,
     isMobile: isMobile(),
     install,
-    getInstallGuide
+    getInstallGuide,
+    resetInstallState
   }
 }
