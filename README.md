@@ -33,7 +33,7 @@
 - **样式框架**: UnoCSS (Attributify 模式)
 - **CSS 处理**: LightningCSS
 - **PWA**: vite-plugin-pwa
-- **加密库**: crypto-js (已从 crypto-js-wasm 迁移以提高稳定性)
+- **加密库**: crypto-js (未来可迁移至 crypto-js-wasm)
 - **测试框架**: Vitest + Happy DOM
 - **代码规范**: oxlint + dprint
 
