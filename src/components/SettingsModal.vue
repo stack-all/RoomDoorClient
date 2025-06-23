@@ -321,13 +321,15 @@ const loadSavedDevices = () => {
 }
 
 const removeDevice = (deviceId: string) => {
-  // 从保存的设备列表中移除
+  // 使用新的API移除设备
   try {
-    const saved = lockStore.bluetooth.getSavedAuthorizedDevices()
-    const filtered = saved.filter(d => d.id !== deviceId)
-    localStorage.setItem('bluetooth_authorized_devices', JSON.stringify(filtered))
-    loadSavedDevices()
-    lockStore.toast.info('设备已移除')
+    const success = (lockStore.bluetooth as any).removeAuthorizedDevice(deviceId)
+    if (success) {
+      loadSavedDevices()
+      lockStore.toast.info('设备已移除')
+    } else {
+      lockStore.toast.error('移除设备失败')
+    }
   } catch (err) {
     console.error('移除设备失败:', err)
     lockStore.toast.error('移除设备失败')

@@ -146,19 +146,25 @@
 
         <div class="flex space-x-3">
           <button
-            v-if="!lockStore.isConnected"
-            @click="handleConnect"
+            @click="handleSmartConnect"
             :disabled="lockStore.isConnecting"
-            class="btn-primary flex-1"
+            class="flex-1"
+            :class="getConnectButtonClass()"
           >
-            {{ lockStore.isConnecting ? '连接中...' : '连接设备' }}
+            {{ getConnectButtonText() }}
           </button>
+          
+          <!-- 自动重连切换按钮 -->
           <button
-            v-else
-            @click="handleDisconnect"
-            class="btn-secondary flex-1"
+            v-if="lockStore.bluetooth?.checkWebBluetoothSupport?.()"
+            @click="toggleAutoReconnect"
+            :class="{
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors': true,
+              'bg-blue-100 text-blue-700 hover:bg-blue-200': lockStore.deviceSettings.autoConnect,
+              'bg-gray-100 text-gray-600 hover:bg-gray-200': !lockStore.deviceSettings.autoConnect
+            }"
           >
-            断开连接
+            {{ lockStore.deviceSettings.autoConnect ? '🔄 自动' : '🔗 手动' }}
           </button>
         </div>
       </div>
@@ -295,8 +301,56 @@ const handleConnect = async () => {
   await lockStore.connect()
 }
 
-const handleDisconnect = () => {
-  lockStore.disconnect()
+// 新的智能连接控制
+const handleSmartConnect = async () => {
+  await lockStore.smartConnectControl()
+}
+
+// 切换自动重连
+const toggleAutoReconnect = async () => {
+  if (lockStore.deviceSettings.autoConnect) {
+    await lockStore.stopAutoReconnect()
+  } else {
+    await lockStore.startAutoReconnect()
+  }
+}
+
+// 获取连接按钮样式
+const getConnectButtonClass = () => {
+  if (lockStore.deviceSettings.autoConnect) {
+    if (lockStore.isConnected) {
+      return 'btn-warning' // 黄色：停止自动重连
+    } else {
+      return 'btn-primary' // 蓝色：选择设备
+    }
+  } else {
+    if (lockStore.isConnected) {
+      return 'btn-secondary' // 灰色：断开连接
+    } else {
+      return 'btn-primary' // 蓝色：连接设备
+    }
+  }
+}
+
+// 获取连接按钮文本
+const getConnectButtonText = () => {
+  if (lockStore.isConnecting) {
+    return '连接中...'
+  }
+  
+  if (lockStore.deviceSettings.autoConnect) {
+    if (lockStore.isConnected) {
+      return '停止自动重连'
+    } else {
+      return '选择设备连接'
+    }
+  } else {
+    if (lockStore.isConnected) {
+      return '断开连接'
+    } else {
+      return '连接设备'
+    }
+  }
 }
 
 const handlePasswordUnlock = async () => {

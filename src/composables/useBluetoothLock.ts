@@ -37,6 +37,12 @@ export function useBluetoothLock() {
   let responseCharacteristic: BluetoothRemoteGATTCharacteristic | null = null
   let advertisementWatcher: AbortController | null = null
 
+  // 连接控制状态
+  let connectionAttemptInProgress = false
+  let lastConnectionAttempt = 0
+  let reconnectionDebounceTimer: number | null = null
+  let deviceSelectionInProgress = false
+
   /**
    * 检查蓝牙支持
    */
@@ -135,6 +141,38 @@ export function useBluetoothLock() {
   /**
    * 启动广告监听，实现自动重连
    */
+  /**
+   * 带防抖的自动重连逻辑
+   */
+  const debouncedReconnect = (device: BluetoothDevice, rssi: number) => {
+    const now = Date.now()
+    
+    // 防止频繁重连：至少间隔3秒
+    if (now - lastConnectionAttempt < 3000) {
+      console.log('连接尝试间隔太短，跳过此次重连')
+      return
+    }
+
+    // 清除之前的定时器
+    if (reconnectionDebounceTimer) {
+      clearTimeout(reconnectionDebounceTimer)
+    }
+
+    // 设置防抖延时：信号强度越强延时越短
+    const debounceDelay = rssi > -60 ? 500 : rssi > -80 ? 1000 : 2000
+
+    reconnectionDebounceTimer = window.setTimeout(async () => {
+      if (!connectionState.value.isConnected && !connectionAttemptInProgress) {
+        console.log(`设备信号强度: ${rssi}dBm, 开始自动连接...`)
+        lastConnectionAttempt = now
+        await connectToSpecificDevice(device, true)
+      }
+    }, debounceDelay)
+  }
+
+  /**
+   * 启动广告监听
+   */
   const startAdvertisementWatching = async (): Promise<boolean> => {
     if (!checkWebBluetoothSupport()) {
       console.log('新版 Web Bluetooth API 不支持，无法启动广告监听')
@@ -166,13 +204,13 @@ export function useBluetoothLock() {
             signal: advertisementWatcher.signal
           })
 
-          device.addEventListener('advertisementreceived', async (event: any) => {
-            console.log('收到设备广告:', event.device.name, 'RSSI:', event.rssi)
+          device.addEventListener('advertisementreceived', (event: any) => {
+            const rssi = event.rssi || -100
+            console.log(`收到设备广告: ${event.device.name}, RSSI: ${rssi}dBm`)
             
-            // 如果当前未连接且不在连接中，尝试自动连接
+            // 只有在未连接且未在连接中时才尝试自动连接
             if (!connectionState.value.isConnected && !connectionState.value.isConnecting) {
-              console.log('检测到设备信号，尝试自动连接...')
-              await connectToSpecificDevice(event.device)
+              debouncedReconnect(event.device, rssi)
             }
           })
 
@@ -198,6 +236,12 @@ export function useBluetoothLock() {
    * 停止广告监听
    */
   const stopAdvertisementWatching = () => {
+    // 清理定时器
+    if (reconnectionDebounceTimer) {
+      clearTimeout(reconnectionDebounceTimer)
+      reconnectionDebounceTimer = null
+    }
+
     if (advertisementWatcher) {
       advertisementWatcher.abort()
       advertisementWatcher = null
@@ -205,6 +249,8 @@ export function useBluetoothLock() {
     
     isWatchingAdvertisements.value = false
     autoReconnectEnabled.value = false
+    connectionAttemptInProgress = false
+    deviceSelectionInProgress = false
     
     // 清除存储状态
     localStorage.removeItem(ADVERTISEMENT_WATCH_KEY)
@@ -218,8 +264,15 @@ export function useBluetoothLock() {
   const checkAutoStartWatching = async () => {
     const shouldWatch = localStorage.getItem(ADVERTISEMENT_WATCH_KEY) === 'true'
     if (shouldWatch && !isWatchingAdvertisements.value) {
-      console.log('检测到之前启用了广告监听，尝试自动启动...')
-      await startAdvertisementWatching()
+      // 检查是否有已授权设备
+      const authorizedDevices = await getAuthorizedDevices()
+      if (authorizedDevices.length > 0) {
+        console.log('检测到之前启用了广告监听，尝试自动启动...')
+        await startAdvertisementWatching()
+      } else {
+        console.log('没有已授权设备，清除广告监听状态')
+        localStorage.removeItem(ADVERTISEMENT_WATCH_KEY)
+      }
     }
   }
 
@@ -290,9 +343,18 @@ export function useBluetoothLock() {
 
   /**
    * 连接到指定的设备
+   * @param device 要连接的蓝牙设备
+   * @param autoConnect 是否为自动连接（影响错误处理和日志）
    */
-  const connectToSpecificDevice = async (device: BluetoothDevice): Promise<boolean> => {
+  const connectToSpecificDevice = async (device: BluetoothDevice, autoConnect = false): Promise<boolean> => {
     try {
+      // 防止并发连接
+      if (connectionAttemptInProgress) {
+        if (!autoConnect) console.log('已有连接正在进行中，跳过此次连接')
+        return false
+      }
+
+      connectionAttemptInProgress = true
       connectionState.value.isConnecting = true
       connectionState.value.error = null
 
@@ -335,7 +397,8 @@ export function useBluetoothLock() {
       // 保存到授权设备列表
       saveAuthorizedDevice(device)
 
-      console.log('蓝牙连接成功:', device.name)
+      const logMessage = autoConnect ? '自动连接成功' : '蓝牙连接成功'
+      console.log(`${logMessage}:`, device.name)
       
       // 自动请求一个挑战
       setTimeout(async () => {
@@ -351,8 +414,15 @@ export function useBluetoothLock() {
         device: null,
         error: errorMessage
       }
-      console.error('连接到指定设备失败:', err)
+      
+      if (!autoConnect) {
+        console.error('连接到指定设备失败:', err)
+      } else {
+        console.log('自动连接失败:', errorMessage)
+      }
       return false
+    } finally {
+      connectionAttemptInProgress = false
     }
   }
 
@@ -361,6 +431,12 @@ export function useBluetoothLock() {
    */
   const smartConnect = async (): Promise<boolean> => {
     if (!checkBluetoothSupport()) return false
+
+    // 防止重复弹出设备选择器
+    if (deviceSelectionInProgress) {
+      console.log('设备选择器已打开，跳过此次连接')
+      return false
+    }
 
     // 首先尝试连接已授权的设备
     const authorizedSuccess = await connectToAuthorizedDevice()
@@ -375,15 +451,21 @@ export function useBluetoothLock() {
 
     // 如果没有已授权设备或连接失败，则弹出设备选择
     console.log('尝试通过设备选择器连接...')
-    const manualSuccess = await connect()
     
-    // 手动连接成功后也启动广告监听
-    if (manualSuccess && checkWebBluetoothSupport() && !isWatchingAdvertisements.value) {
-      console.log('手动连接成功，启动广告监听...')
-      setTimeout(() => startAdvertisementWatching(), 1000)
+    try {
+      deviceSelectionInProgress = true
+      const manualSuccess = await connect()
+      
+      // 手动连接成功后也启动广告监听
+      if (manualSuccess && checkWebBluetoothSupport() && !isWatchingAdvertisements.value) {
+        console.log('手动连接成功，启动广告监听...')
+        setTimeout(() => startAdvertisementWatching(), 1000)
+      }
+      
+      return manualSuccess
+    } finally {
+      deviceSelectionInProgress = false
     }
-    
-    return manualSuccess
   }
 
   /**
@@ -425,6 +507,16 @@ export function useBluetoothLock() {
     try {
       // 停止广告监听
       stopAdvertisementWatching()
+
+      // 清理连接状态
+      connectionAttemptInProgress = false
+      deviceSelectionInProgress = false
+      
+      // 清理定时器
+      if (reconnectionDebounceTimer) {
+        clearTimeout(reconnectionDebounceTimer)
+        reconnectionDebounceTimer = null
+      }
 
       if (challengeCharacteristic) {
         challengeCharacteristic.removeEventListener('characteristicvaluechanged', handleChallengeReceived)
@@ -589,6 +681,46 @@ export function useBluetoothLock() {
     }
   }
 
+  /**
+   * 移除已授权设备
+   */
+  const removeAuthorizedDevice = (deviceId: string) => {
+    try {
+      const savedDevices = getSavedAuthorizedDevices()
+      const filteredDevices = savedDevices.filter(d => d.id !== deviceId)
+      localStorage.setItem(SAVED_DEVICES_KEY, JSON.stringify(filteredDevices))
+      
+      // 如果删除的是当前保存的设备，也清除该记录
+      const savedInfo = getSavedDeviceInfo()
+      if (savedInfo && savedInfo.id === deviceId) {
+        localStorage.removeItem(SAVED_DEVICE_KEY)
+      }
+      
+      console.log('已移除授权设备:', deviceId)
+      return true
+    } catch (err) {
+      console.error('移除授权设备失败:', err)
+      return false
+    }
+  }
+
+  /**
+   * 清除所有授权设备
+   */
+  const clearAllAuthorizedDevices = () => {
+    try {
+      localStorage.removeItem(SAVED_DEVICES_KEY)
+      localStorage.removeItem(SAVED_DEVICE_KEY)
+      localStorage.removeItem(ADVERTISEMENT_WATCH_KEY)
+      stopAdvertisementWatching()
+      console.log('已清除所有授权设备')
+      return true
+    } catch (err) {
+      console.error('清除授权设备失败:', err)
+      return false
+    }
+  }
+
   // 计算属性
   const isConnected = computed(() => connectionState.value.isConnected)
   const isConnecting = computed(() => connectionState.value.isConnecting)
@@ -629,6 +761,8 @@ export function useBluetoothLock() {
     connectToAuthorizedDevice,
     startAdvertisementWatching,
     stopAdvertisementWatching,
-    checkAutoStartWatching
+    checkAutoStartWatching,
+    removeAuthorizedDevice,
+    clearAllAuthorizedDevices
   }
 }

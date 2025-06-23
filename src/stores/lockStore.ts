@@ -35,6 +35,14 @@ export const useLockStore = defineStore('lock', () => {
     mockMode: false
   })
 
+  // 连接控制配置
+  const connectionConfig = ref({
+    maxRetryAttempts: 3,
+    retryDelay: 2000,
+    autoConnectDelay: 1000,
+    advertisementDebounce: 500
+  })
+
   // 组合式函数
   const realBluetooth = useBluetoothLock()
   const mockBluetooth = useMockBluetoothLock()
@@ -66,45 +74,73 @@ export const useLockStore = defineStore('lock', () => {
   }
 
   /**
-   * 自动连接功能
+   * 优雅的自动连接功能
    */
-  const autoConnect = async () => {
+  const autoConnect = async (silent = false) => {
     if (!deviceSettings.value.autoConnect || isConnected.value) {
       return
     }
 
     try {
-      console.log('尝试自动连接...')
-      toast.info('正在尝试自动连接设备...')
+      if (!silent) {
+        console.log('尝试自动连接...')
+        toast.info('正在尝试自动连接设备...')
+      }
       
-      // 使用智能连接，优先尝试已授权设备
-      const success = await bluetooth.value.smartConnect()
+      // 首先尝试已授权设备（不弹窗）
+      const success = await bluetooth.value.connectToAuthorizedDevice()
+      
       if (success) {
-        toast.success('自动连接成功！')
+        if (!silent) toast.success('自动连接成功！')
+        
+        // 启动广告监听
+        if (bluetooth.value.checkWebBluetoothSupport()) {
+          setTimeout(() => {
+            bluetooth.value.startAdvertisementWatching()
+          }, connectionConfig.value.autoConnectDelay)
+        }
       } else {
-        console.log('自动连接失败，建议用户手动连接')
-        toast.warning('自动连接失败，请手动连接设备')
+        console.log('自动连接失败，没有可用的已授权设备')
+        if (!silent) {
+          toast.info('未找到已配对设备，请手动连接')
+        }
       }
     } catch (err) {
+      console.error('自动连接失败:', err)
       console.error('自动连接失败:', err)
       // 静默失败，不显示错误消息
     }
   }
 
+  // 初始化控制标志
+  let isInitializing = false
+
   /**
-   * 初始化自动重连功能
+   * 初始化自动重连功能（防止重复调用）
    */
   const initializeAutoReconnect = async () => {
-    if (deviceSettings.value.autoConnect && bluetooth.value.checkWebBluetoothSupport()) {
+    if (isInitializing || !deviceSettings.value.autoConnect) {
+      return
+    }
+
+    if (!bluetooth.value.checkWebBluetoothSupport()) {
+      console.log('不支持新版蓝牙API，跳过自动重连初始化')
+      return
+    }
+
+    try {
+      isInitializing = true
       console.log('初始化自动重连功能...')
       
-      // 检查是否应该自动启动广告监听
+      // 检查是否应该自动启动广告监听（这个方法内部不会触发连接）
       await bluetooth.value.checkAutoStartWatching()
       
-      // 如果当前未连接，尝试自动连接
-      if (!isConnected.value) {
-        setTimeout(() => autoConnect(), 500)
+      // 如果当前未连接且广告监听未启动，尝试一次自动连接
+      if (!isConnected.value && !bluetooth.value.isWatchingAdvertisements.value) {
+        setTimeout(() => autoConnect(true), 1000) // 静默模式
       }
+    } finally {
+      isInitializing = false
     }
   }
 
@@ -345,6 +381,55 @@ export const useLockStore = defineStore('lock', () => {
     saveSettings()
   }
 
+  /**
+   * 智能连接/断开控制
+   * 如果启用自动重连且未连接，则弹出设备选择器
+   * 如果启用自动重连且已连接，则停止自动重连
+   * 否则正常连接/断开
+   */
+  const smartConnectControl = async (): Promise<boolean> => {
+    // 如果启用了自动重连
+    if (deviceSettings.value.autoConnect) {
+      if (isConnected.value) {
+        // 已连接状态：断开并停止自动重连
+        stopAutoReconnect()
+        return true
+      } else {
+        // 未连接状态：弹出设备选择器进行手动连接
+        return await connect()
+      }
+    } else {
+      // 未启用自动重连：正常连接逻辑
+      if (isConnected.value) {
+        disconnect()
+        return true
+      } else {
+        return await connect()
+      }
+    }
+  }
+
+  /**
+   * 停止自动重连功能
+   */
+  const stopAutoReconnect = () => {
+    deviceSettings.value.autoConnect = false
+    bluetooth.value.stopAdvertisementWatching()
+    disconnect()
+    saveSettings()
+    toast.info('已停止自动重连')
+  }
+
+  /**
+   * 启动自动重连功能
+   */
+  const startAutoReconnect = async () => {
+    deviceSettings.value.autoConnect = true
+    saveSettings()
+    toast.info('已启用自动重连')
+    await initializeAutoReconnect()
+  }
+
   // 初始化
   loadSettings()
 
@@ -383,6 +468,9 @@ export const useLockStore = defineStore('lock', () => {
     autoConnect,
     initializeAutoReconnect,
     updateSettings,
+    smartConnectControl,
+    startAutoReconnect,
+    stopAutoReconnect,
     
     // 组合式函数
     bluetooth,
