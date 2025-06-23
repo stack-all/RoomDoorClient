@@ -1,385 +1,530 @@
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>🔐 蓝牙门锁</h1>
-      <p>安全便捷的智能开锁体验</p>
-    </div>
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- 标题栏 -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-md mx-auto px-4 py-4">
+        <div class="flex items-center justify-between">
+          <h1 class="text-xl font-bold text-gray-900">智能门锁</h1>
+          <button
+            @click="showSettings = true"
+            class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="设置"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
 
-    <div class="card">
-      <div class="form-group">
-        <div class="status-section">
-          <span class="status-indicator" :class="statusClass"></span>
-          <span class="status-text">{{ statusText }}</span>
+    <!-- 主内容 -->
+    <main class="max-w-md mx-auto px-4 py-8">
+      <!-- 设备信息组件 -->
+      <DeviceInfo ref="deviceInfoRef" />
+
+      <!-- 一键开锁卡片 -->
+      <div v-if="showQuickUnlock" class="card mb-6 bg-blue-50 border-blue-200">
+        <div class="text-center">
+          <h2 class="text-lg font-semibold text-blue-900 mb-4">🚪 一键开锁</h2>
+          <p class="text-blue-700 mb-4">点击下方按钮开始开锁流程</p>
+          <button
+            @click="handleQuickUnlock"
+            :disabled="lockStore.lockState.isUnlocking"
+            class="btn-primary w-full py-4 text-lg"
+          >
+            <svg v-if="!lockStore.lockState.isUnlocking" class="w-6 h-6 mr-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <svg v-else class="w-6 h-6 mr-3 inline animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            {{ lockStore.lockState.isUnlocking ? '开锁中...' : '🔓 立即开锁' }}
+          </button>
+          <button
+            @click="showQuickUnlock = false"
+            class="mt-3 text-sm text-blue-600 hover:text-blue-800"
+          >
+            取消
+          </button>
         </div>
       </div>
 
-      <div v-if="!isConnected" class="connection-section">
-        <div class="form-group">
-          <label class="form-label">选择门锁设备</label>
-          <div v-if="devices.length === 0" class="no-devices">
-            <p>未发现设备，请确保门锁已开启并在附近</p>
+          <div v-if="showAutoConnectPrompt" class="card mb-6 bg-yellow-50 border-yellow-200">
+        <div class="flex items-start">
+          <svg class="w-6 h-6 text-yellow-600 mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.5 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div class="flex-1">
+            <h3 class="font-medium text-yellow-900 mb-2">
+              {{ lockStore.bluetooth?.checkWebBluetoothSupport?.() ? '智能重连提醒' : '自动连接提醒' }}
+            </h3>
+            <p class="text-yellow-800 text-sm mb-3">
+              {{ lockStore.bluetooth?.checkWebBluetoothSupport?.() 
+                ? '正在尝试连接到您已授权的设备，如果设备不在附近或连接失败，请手动连接。' 
+                : '您已启用自动连接，但当前浏览器版本不支持设备记忆功能。建议启用新版权限后端获得更好体验。' }}
+            </p>
+            <div class="flex gap-2">
+              <button
+                @click="handleConnect(); showAutoConnectPrompt = false"
+                class="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
+              >
+                立即连接
+              </button>
+              <button
+                v-if="!lockStore.bluetooth?.checkWebBluetoothSupport?.()"
+                @click="handleOpenChromeFlags"
+                class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              >
+                启用新功能
+              </button>
+              <button
+                @click="showAutoConnectPrompt = false"
+                class="px-3 py-1 text-yellow-600 hover:text-yellow-800 text-sm"
+              >
+                忽略
+              </button>
+            </div>
           </div>
-          <div v-else>
+        </div>
+      </div>
+
+      <!-- PWA 安装提示 -->
+      <div v-if="showPWAInstallPrompt && pwa.canInstall && !pwa.isStandalone" class="card mb-6 bg-green-50 border-green-200">
+        <div class="flex items-start">
+          <svg class="w-6 h-6 text-green-600 mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <div class="flex-1">
+            <h3 class="font-medium text-green-900 mb-2">🏠 安装应用到主屏幕</h3>
+            <p class="text-green-800 text-sm mb-3">
+              将智能门锁添加到主屏幕，享受更快的启动速度和原生应用体验。
+            </p>
+            <div class="flex gap-2">
+              <button
+                @click="handleInstallPWA"
+                class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              >
+                立即安装
+              </button>
+              <button
+                @click="handleDismissPWAPrompt"
+                class="px-3 py-1 text-green-600 hover:text-green-800 text-sm"
+              >
+                稍后
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 连接状态卡片 -->
+      <div class="card mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">连接状态</h2>
+          <div class="flex items-center space-x-2">
             <div 
-              v-for="device in devices" 
-              :key="device.id"
-              class="device-item"
-              :class="{ selected: selectedDevice?.id === device.id }"
-              @click="selectDevice(device)"
-            >              <div class="device-info">
-                <div class="device-name">{{ device.name || '未知设备' }}</div>
-              </div>
+              :class="{
+                'w-3 h-3 rounded-full': true,
+                'bg-green-500': lockStore.isConnected,
+                'bg-yellow-500 animate-pulse': lockStore.isConnecting,
+                'bg-red-500': !lockStore.isConnected && !lockStore.isConnecting
+              }"
+            />
+            <span class="text-sm text-gray-600">
+              {{ connectionStatusText }}
+            </span>
+          </div>
+        </div>
+        
+        <div v-if="lockStore.connectionError" class="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <p class="text-sm text-red-600">{{ lockStore.connectionError }}</p>
+        </div>
+
+        <div class="flex space-x-3">
+          <button
+            v-if="!lockStore.isConnected"
+            @click="handleConnect"
+            :disabled="lockStore.isConnecting"
+            class="btn-primary flex-1"
+          >
+            {{ lockStore.isConnecting ? '连接中...' : '连接设备' }}
+          </button>
+          <button
+            v-else
+            @click="handleDisconnect"
+            class="btn-secondary flex-1"
+          >
+            断开连接
+          </button>
+        </div>
+      </div>
+
+      <!-- 开锁卡片 -->
+      <div class="card mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">门锁控制</h2>
+        
+        <!-- 开锁状态显示 -->
+        <div v-if="lockStore.lockState.isUnlocked" class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+          <div class="flex items-center">
+            <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p class="text-green-800 font-medium">门锁已打开</p>
+              <p class="text-green-600 text-sm">{{ formatTime(lockStore.lockState.lastUnlockTime) }}</p>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">门锁密码</label>
-          <input 
-            v-model="password" 
-            type="password" 
-            class="input" 
-            placeholder="请输入门锁密码"
-            @input="clearMessage"
+        <!-- 生物识别开锁 -->
+        <div v-if="lockStore.biometrics.canUse && lockStore.deviceSettings.biometricEnabled" class="mb-4">
+          <button
+            @click="handleBiometricUnlock"
+            :disabled="!lockStore.canUnlock || lockStore.lockState.isUnlocking"
+            class="btn-primary w-full py-4 text-lg"
           >
-        </div>        <div class="form-group" v-if="supportsBiometric">
-          <button 
-            @click="toggleBiometricSave"
-            class="btn btn-outline"
-            type="button"
-          >
-            <svg class="biometric-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1C8.96 1 6.21 2.65 4.22 5.1C4.15 5.2 4.13 5.32 4.16 5.43C4.2 5.54 4.28 5.63 4.38 5.68L6.54 6.72C6.66 6.78 6.81 6.75 6.9 6.64C8.18 5.16 9.97 4.2 12 4.2C14.03 4.2 15.82 5.16 17.1 6.64C17.19 6.75 17.34 6.78 17.46 6.72L19.62 5.68C19.72 5.63 19.8 5.54 19.84 5.43C19.87 5.32 19.85 5.2 19.78 5.1C17.79 2.65 15.04 1 12 1M12 6C10.07 6 8.32 6.74 6.97 7.9C6.88 7.98 6.85 8.1 6.88 8.21C6.91 8.32 6.99 8.41 7.09 8.46L9.25 9.5C9.37 9.56 9.52 9.53 9.61 9.42C10.34 8.61 11.12 8.2 12 8.2C12.88 8.2 13.66 8.61 14.39 9.42C14.48 9.53 14.63 9.56 14.75 9.5L16.91 8.46C17.01 8.41 17.09 8.32 17.12 8.21C17.15 8.1 17.12 7.98 17.03 7.9C15.68 6.74 13.93 6 12 6M12 10C11.45 10 10.95 10.22 10.59 10.59C10.22 10.95 10 11.45 10 12C10 12.55 10.22 13.05 10.59 13.41C10.95 13.78 11.45 14 12 14C12.55 14 13.05 13.78 13.41 13.41C13.78 13.05 14 12.55 14 12C14 11.45 13.78 10.95 13.41 10.59C13.05 10.22 12.55 10 12 10Z"/>
+            <svg v-if="!lockStore.lockState.isUnlocking" class="w-6 h-6 mr-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            {{ getBiometricButtonText() }}
+            <svg v-else class="w-6 h-6 mr-3 inline animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            {{ lockStore.lockState.isUnlocking ? '验证中...' : '生物识别开锁' }}
           </button>
-          <p class="biometric-hint">{{ getBiometricHintText() }}</p>
         </div>
 
-        <button 
-          @click="scanDevices" 
-          :disabled="isScanning"
-          class="btn btn-primary"
-          style="margin-bottom: 12px;"
-        >
-          <span v-if="isScanning" class="spinner"></span>
-          {{ isScanning ? '扫描中...' : '扫描设备' }}
-        </button>
-
-        <button 
-          @click="connect" 
-          :disabled="!canConnect"
-          class="btn btn-primary"
-        >
-          <span v-if="isConnecting" class="spinner"></span>
-          {{ isConnecting ? '连接中...' : '连接门锁' }}
-        </button>
-      </div>      <div v-else class="control-section">        <div class="form-group">
-          <div class="device-info">
-            <div class="device-name">{{ connectedDevice?.name || '已连接设备' }}</div>
+        <!-- 手动密码开锁 -->
+        <div class="space-y-4">
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+              密码
+            </label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              placeholder="请输入门锁密码"
+              class="input"
+              @keyup.enter="handlePasswordUnlock"
+            >
           </div>
-        </div>        <!-- 挑战数据状态显示 - 仅在需要开锁时显示 -->
-        <div class="form-group" v-if="challengeData || (!challengeData && isConnected)">
-          <div class="challenge-status">
-            <span class="status-indicator" :class="challengeStatusClass"></span>
-            <span class="status-text">{{ challengeStatusText }}</span>
+          
+          <button
+            @click="handlePasswordUnlock"
+            :disabled="!password.trim() || !lockStore.canUnlock || lockStore.lockState.isUnlocking"
+            class="btn-primary w-full py-3"
+            :title="`可开锁: ${lockStore.canUnlock}, 已连接: ${lockStore.isConnected}, 有挑战: ${lockStore.bluetooth?.hasChallenge}`"
+          >
+            <svg v-if="!lockStore.lockState.isUnlocking" class="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <svg v-else class="w-5 h-5 mr-2 inline animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            {{ lockStore.lockState.isUnlocking ? '开锁中...' : '密码开锁' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 快速提示 -->
+      <div class="card bg-blue-50 border-blue-200">
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="text-sm text-blue-800">
+            <p class="font-medium mb-1">使用提示</p>
+            <ul class="space-y-1 text-blue-700">
+              <li>• 首次使用需要先连接蓝牙设备</li>
+              <li>• 可在设置中启用生物识别快速开锁</li>
+              <li>• 支持桌面快捷方式一键开锁</li>
+              <li v-if="lockStore.bluetooth?.checkWebBluetoothSupport?.()">
+                • ✨ 支持设备记忆和自动重连（新功能）
+              </li>
+              <li v-else>
+                • ⚠️ 建议启用chrome://flags中的新版蓝牙权限获得更好体验
+              </li>
+            </ul>
           </div>
         </div>
-
-        <button 
-          @click="openDoor" 
-          :disabled="isUnlocking || !challengeData"
-          class="btn btn-success"
-          style="margin-bottom: 12px; font-size: 18px; padding: 16px;"
-        >
-          <span v-if="isUnlocking" class="spinner"></span>
-          {{ isUnlocking ? '开锁中...' : (challengeData ? '🔓 开门' : '⏳ 等待挑战数据') }}
-        </button>
-
-        <button 
-          @click="disconnect" 
-          class="btn btn-outline"
-        >
-          断开连接
-        </button>
       </div>
 
-      <div v-if="message" class="alert" :class="messageClass">
-        {{ message }}
-      </div>
-    </div>    <div class="card" v-if="lastDevice">
-      <h3 style="margin-bottom: 16px;">上次连接的设备</h3>
-      <div class="device-item" @click="connectToLastDevice">
-        <div class="device-info">
-          <div class="device-name">{{ lastDevice.name || '未知设备' }}</div>
+      <!-- 调试信息 -->
+      <div class="card bg-gray-50 border-gray-200 mt-4" v-if="showDebug">
+        <h3 class="font-medium text-gray-900 mb-3">调试信息</h3>
+        <div class="space-y-2 text-sm text-gray-600">
+          <div>连接状态: {{ lockStore.isConnected ? '已连接' : '未连接' }}</div>
+          <div>连接中: {{ lockStore.isConnecting ? '是' : '否' }}</div>
+          <div>可以开锁: {{ lockStore.canUnlock ? '是' : '否' }}</div>
+          <div>有挑战: {{ lockStore.bluetooth?.hasChallenge ? '是' : '否' }}</div>
+          <div>正在开锁: {{ lockStore.lockState.isUnlocking ? '是' : '否' }}</div>
+          <div>设备信息: {{ lockStore.bluetooth?.connectionState.value?.device?.name || '无' }}</div>
+          <div>按钮禁用: {{ !password.trim() || !lockStore.canUnlock || lockStore.lockState.isUnlocking ? '是' : '否' }}</div>
+          <div>密码长度: {{ password.trim().length }}</div>
+          <div>新版蓝牙API支持: {{ lockStore.bluetooth?.checkWebBluetoothSupport?.() ? '是' : '否' }}</div>
+          <div>自动连接设置: {{ lockStore.deviceSettings.autoConnect ? '已启用' : '未启用' }}</div>
+          <div>广告监听: {{ lockStore.bluetooth?.isWatchingAdvertisements ? '运行中' : '未运行' }}</div>
+          <div>自动重连: {{ lockStore.bluetooth?.autoReconnectEnabled ? '已启用' : '未启用' }}</div>
+        </div>
+        <div class="mt-3 space-x-2 flex flex-wrap gap-2">
+          <button @click="handleRequestChallenge" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">
+            请求挑战
+          </button>
+          <button @click="handleResetState" class="px-3 py-1 bg-red-500 text-white rounded text-xs">
+            重置状态
+          </button>
+          <button @click="handleCheckDevices" class="px-3 py-1 bg-green-500 text-white rounded text-xs">
+            检查设备
+          </button>
+          <button 
+            v-if="lockStore.bluetooth?.checkWebBluetoothSupport?.()"
+            @click="handleToggleAdvertisementWatching" 
+            :class="{
+              'px-3 py-1 text-white rounded text-xs': true,
+              'bg-orange-500': !lockStore.bluetooth?.isWatchingAdvertisements,
+              'bg-purple-500': lockStore.bluetooth?.isWatchingAdvertisements
+            }"
+          >
+            {{ lockStore.bluetooth?.isWatchingAdvertisements ? '停止监听' : '启动监听' }}
+          </button>
+          <a href="/test-bluetooth.html" target="_blank" class="px-3 py-1 bg-gray-500 text-white rounded text-xs inline-block">
+            测试蓝牙
+          </a>
         </div>
       </div>
-    </div>
-
-    <!-- PWA安装卡片 -->
-    <div class="card" v-if="canInstall && !isInstalled">
-      <h3 style="margin-bottom: 16px;">📱 安装到设备</h3>
-      <p style="margin-bottom: 16px; color: var(--text-secondary);">
-        将蓝牙门锁安装到您的设备，享受更好的使用体验
-      </p>
-      <button @click="handleInstallPWA" class="btn btn-primary">
-        <svg class="install-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-        安装应用
+      
+      <!-- 调试开关 -->
+      <button 
+        @click="showDebug = !showDebug" 
+        class="fixed bottom-4 right-4 w-12 h-12 bg-gray-800 text-white rounded-full opacity-20 hover:opacity-60 transition-opacity"
+      >
+        🐛
       </button>
-    </div>
+    </main>
 
-    <!-- PWA已安装提示 -->
-    <div class="card" v-if="isInstalled">
-      <div class="pwa-installed">
-        <svg class="success-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-        <h3>应用已安装</h3>
-        <p>您可以在主屏幕或应用列表中找到蓝牙门锁应用</p>
-      </div>
-    </div>
+    <!-- 设置模态框 -->
+    <SettingsModal 
+      v-if="showSettings"
+      @close="showSettings = false"
+    />
+
+    <!-- Toast 通知 -->
+    <ToastContainer />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useBluetooth } from './composables/useBluetooth'
-import { useBiometric } from './composables/useBiometric'
-import { useStorage } from './composables/useStorage'
-import { usePWA } from './composables/usePWA'
+import { useLockStore } from '@/stores/lockStore'
+import { usePWA } from '@/composables/usePWA'
+import SettingsModal from '@/components/SettingsModal.vue'
+import ToastContainer from '@/components/ToastContainer.vue'
+import DeviceInfo from '@/components/DeviceInfo.vue'
 
-export default {
-  name: 'App',
-  setup() {
-    const password = ref('')
-    const message = ref('')
-    const messageType = ref('info')
-      const {
-      isConnected,
-      isConnecting,
-      isScanning,
-      isUnlocking,
-      devices,
-      selectedDevice,
-      connectedDevice,
-      challengeData,
-      hasChallengeData,
-      scanDevices,      selectDevice,
-      connect,
-      disconnect,
-      openDoor
-    } = useBluetooth();
+const lockStore = useLockStore()
+const pwa = usePWA()
+const password = ref('')
+const showSettings = ref(false)
+const showDebug = ref(true) // 暂时默认显示调试信息
+const showQuickUnlock = ref(false) // 显示一键开锁按钮
+const showAutoConnectPrompt = ref(false) // 显示自动连接提示
+const showPWAInstallPrompt = ref(false) // 显示PWA安装提示
+const deviceInfoRef = ref() // 设备信息组件引用
 
-    const {
-      supportsBiometric,
-      biometricSaveEnabled,
-      toggleBiometricSave,
-      savePasswordWithBiometric,
-      getPasswordWithBiometric,
-      hasPasswordSaved
-    } = useBiometric()
+// 计算属性
+const connectionStatusText = computed(() => {
+  if (lockStore.isConnecting) return '连接中...'
+  if (lockStore.isConnected) return '已连接'
+  return '未连接'
+})
 
-    const {
-      getLastDevice,
-      saveLastDevice,
-      getStoredPassword,
-      saveStoredPassword
-    } = useStorage()
+// 方法
+const handleConnect = async () => {
+  await lockStore.connect()
+}
 
-    const {
-      canInstall,
-      isInstalled,
-      installPWA,
-      showManualInstallGuide
-    } = usePWA()
+const handleDisconnect = () => {
+  lockStore.disconnect()
+}
 
-    const lastDevice = ref(null)
-
-    const statusClass = computed(() => {
-      if (isConnected.value) return 'status-connected'
-      if (isConnecting.value) return 'status-connecting'
-      return 'status-disconnected'
+const handlePasswordUnlock = async () => {
+  console.log('handlePasswordUnlock called', {
+    password: password.value.trim(),
+    canUnlock: lockStore.canUnlock,
+    isUnlocking: lockStore.lockState.isUnlocking,
+    isConnected: lockStore.isConnected
+  })
+  
+  if (!password.value.trim()) {
+    console.log('密码为空，停止执行')
+    return
+  }
+  
+  if (!lockStore.canUnlock) {
+    console.log('不能开锁，状态:', {
+      isConnected: lockStore.isConnected,
+      hasChallenge: lockStore.bluetooth?.hasChallenge,
+      canUnlock: lockStore.canUnlock
     })
+    return
+  }
+  
+  console.log('开始密码开锁...')
+  const result = await lockStore.unlockWithPassword(password.value)
+  console.log('开锁结果:', result)
+  password.value = '' // 清空密码输入
+}
 
-    const statusText = computed(() => {
-      if (isConnected.value) return '已连接'
-      if (isConnecting.value) return '连接中...'
-      return '未连接'    });    const canConnect = computed(() => {
-      return selectedDevice.value && password.value.trim() && !isConnecting.value
-    });
+const handleBiometricUnlock = async () => {
+  await lockStore.unlockWithBiometrics()
+}
 
-    const messageClass = computed(() => {
-      return `alert-${messageType.value}`
-    });
+const handleRequestChallenge = async () => {
+  console.log('手动请求挑战')
+  await lockStore.bluetooth?.requestNewChallenge()
+}
 
-    const challengeStatusClass = computed(() => {
-      if (hasChallengeData.value) return 'status-connected'
-      if (isConnected.value) return 'status-connecting'
-      return 'status-disconnected'
-    });
+const handleResetState = () => {
+  console.log('重置应用状态')
+  lockStore.disconnect()
+  password.value = ''
+}
 
-    const challengeStatusText = computed(() => {
-      if (hasChallengeData.value) return '挑战数据已准备'
-      if (isConnected.value) return '等待挑战数据...'
-      return '未连接'
-    });    const showMessage = (msg, type = 'info') => {
-      message.value = msg
-      messageType.value = type
-      setTimeout(() => {
-        message.value = ''
-      }, 5000)
-    };
+const handleQuickUnlock = async () => {
+  console.log('一键开锁触发')
+  const result = await lockStore.autoUnlock()
+  
+  if (result.success) {
+    showQuickUnlock.value = false
+  }
+}
 
-    const clearMessage = () => {
-      message.value = ''
-    };
+const handleCheckDevices = async () => {
+  if (!lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
+    console.log('不支持新版蓝牙API')
+    return
+  }
+  
+  // 显示设备信息组件
+  deviceInfoRef.value?.show()
+}
 
-    const connectToLastDevice = async () => {
-      if (lastDevice.value) {
-        selectedDevice.value = lastDevice.value
-        
-        // 清空当前密码输入框
-        password.value = ''
-        
-        // 尝试使用生物识别获取密码
-        if (supportsBiometric.value && biometricSaveEnabled.value) {
-          try {
-            const savedPassword = await getPasswordWithBiometric()
-            if (savedPassword) {
-              showMessage('指纹验证成功，正在连接...', 'info')
-              const success = await connect(savedPassword)
-              if (success) {
-                showMessage('指纹连接成功！', 'success')
-                return
-              }
-            }
-          } catch (error) {
-            console.log('生物识别验证失败，需要手动输入密码')
-            showMessage('指纹验证失败，请手动输入密码', 'warning')
-          }
-        }
-        
-        showMessage('请输入密码以连接到上次使用的设备', 'info')
-      }
-    }    // 重写connect方法以包含密码保存逻辑
-    const connectWithPasswordSave = async () => {
-      try {
-        const success = await connect(password.value)
-        if (success) {
-          // 保存设备信息
-          saveLastDevice(selectedDevice.value)
-          showMessage('连接成功！', 'success')
-        }
-        return success
-      } catch (error) {
-        showMessage(`连接失败: ${error.message}`, 'error')
-        return false
-      }
-    }    // 重写openDoor方法以包含反馈和密码保存
-    const openDoorWithFeedback = async () => {
-      try {
-        const success = await openDoor(password.value)
-        if (success) {
-          showMessage('开门成功！', 'success')
-          
-          // 仅在开锁成功且启用了指纹保存时才保存密码
-          if (supportsBiometric.value && biometricSaveEnabled.value) {
-            try {
-              await savePasswordWithBiometric(password.value)
-              showMessage('开门成功！密码已通过指纹保存', 'success')
-            } catch (error) {
-              console.error('生物识别保存失败:', error)
-              // 即使指纹保存失败，开门成功的消息依然显示
-            }
-          }
-        } else {
-          showMessage('开门失败，请检查密码', 'error')
-        }      } catch (error) {
-        showMessage(`开门失败: ${error.message}`, 'error')
-      }
-    };
-
-    // 获取指纹按钮文本
-    const getBiometricButtonText = () => {
-      if (hasPasswordSaved()) {
-        return biometricSaveEnabled.value ? '✓ 指纹密码已保存' : '○ 启用指纹解锁'
-      } else {
-        return biometricSaveEnabled.value ? '⏳ 等待保存密码' : '○ 启用指纹保存密码'
-      }
-    };
-
-    // 获取指纹提示文本
-    const getBiometricHintText = () => {
-      if (hasPasswordSaved()) {
-        return biometricSaveEnabled.value ? '可以使用指纹快速连接和开锁' : '启用后可用指纹代替输入密码'
-      } else {
-        return biometricSaveEnabled.value ? '成功开锁后将通过指纹保存密码' : '启用后在开锁成功时保存密码'
-      }
-    };
-
-    // 处理PWA安装
-    const handleInstallPWA = async () => {
-      try {
-        const result = await installPWA()
-        if (result.success) {
-          showMessage(result.message, 'success')
-        } else if (result.isManual) {
-          // 显示手动安装指导
-          showMessage(result.message, 'info')
-        } else {
-          showMessage(result.message, 'warning')
-        }
-      } catch (error) {
-        showMessage('安装失败，请重试', 'error')
-      }
-    };
-
-    onMounted(async () => {
-      // 加载上次连接的设备
-      lastDevice.value = getLastDevice()
-      
-      // 如果有上次连接的设备，显示提示但不自动连接
-      if (lastDevice.value) {
-        selectedDevice.value = lastDevice.value
-        showMessage('发现上次连接的设备，您可以点击下方快速连接', 'info')
-      }
-    });    return {
-      password,
-      message,
-      messageClass,
-      isConnected,
-      isConnecting,
-      isScanning,
-      isUnlocking,
-      devices,
-      selectedDevice,
-      connectedDevice,
-      lastDevice,
-      challengeData,
-      challengeStatusClass,
-      challengeStatusText,
-      statusClass,
-      statusText,
-      canConnect,
-      supportsBiometric,
-      biometricSaveEnabled,
-      canInstall,
-      isInstalled,
-      scanDevices,
-      selectDevice,
-      connect: connectWithPasswordSave,
-      disconnect,
-      openDoor: openDoorWithFeedback,
-      connectToLastDevice,
-      toggleBiometricSave,
-      showMessage,
-      clearMessage,
-      getBiometricButtonText,
-      getBiometricHintText,
-      handleInstallPWA
+const handleToggleAdvertisementWatching = async () => {
+  if (!lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
+    console.log('不支持新版蓝牙API')
+    return
+  }
+  
+  if (lockStore.bluetooth.isWatchingAdvertisements) {
+    console.log('停止广告监听')
+    lockStore.bluetooth.stopAdvertisementWatching()
+  } else {
+    console.log('启动广告监听')
+    const success = await lockStore.bluetooth.startAdvertisementWatching()
+    if (success) {
+      console.log('广告监听启动成功')
+    } else {
+      console.log('广告监听启动失败')
     }
   }
 }
+
+const handleInstallPWA = async () => {
+  try {
+    const success = await pwa.install()
+    
+    if (success) {
+      lockStore.toast.success('应用安装成功！')
+      showPWAInstallPrompt.value = false
+    } else {
+      lockStore.toast.info('安装已取消')
+    }
+  } catch (err) {
+    console.error('PWA 安装失败:', err)
+    lockStore.toast.error('安装失败，请手动添加到主屏幕')
+  }
+}
+
+const handleOpenChromeFlags = () => {
+  window.open('chrome://flags/#enable-web-bluetooth-new-permissions-backend', '_blank')
+}
+
+const handleDismissPWAPrompt = () => {
+  showPWAInstallPrompt.value = false
+  localStorage.setItem('pwa_install_dismissed', 'true')
+}
+
+const formatTime = (timestamp: number | null): string => {
+  if (!timestamp) return ''
+  return new Date(timestamp).toLocaleTimeString('zh-CN')
+}
+
+// 生命周期
+onMounted(() => {
+  // 检查 URL 参数，支持快捷方式开锁
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('action') === 'unlock') {
+    // 显示一键开锁按钮，而不是自动执行
+    showQuickUnlock.value = true
+    // 如果已经连接且有生物识别，可以直接开锁
+    if (lockStore.isConnected && lockStore.biometrics.canUse && lockStore.deviceSettings.biometricEnabled) {
+      setTimeout(() => {
+        lockStore.unlockWithBiometrics()
+      }, 500)
+    }
+  }
+  
+  // 自动连接逻辑
+  if (lockStore.deviceSettings.autoConnect) {
+    // 延迟尝试自动连接
+    setTimeout(async () => {
+      if (!lockStore.isConnected) {
+        try {
+          await lockStore.autoConnect()
+        } catch (err) {
+          // 如果自动连接失败，显示提示
+          setTimeout(() => {
+            if (!lockStore.isConnected) {
+              showAutoConnectPrompt.value = true
+            }
+          }, 2000)
+        }
+      }
+    }, 1000)
+  }
+  
+  // 检查新版蓝牙API支持情况
+  if (lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
+    console.log('✅ 已启用新版Web Bluetooth权限后端，支持设备记忆和自动重连')
+  } else {
+    console.log('⚠️ 未启用新版Web Bluetooth权限后端，建议在chrome://flags启用')
+  }
+
+  // PWA 安装提示逻辑
+  if (pwa.canInstall && !pwa.isStandalone) {
+    // 延迟显示 PWA 安装提示，避免与自动连接提示冲突
+    setTimeout(() => {
+      // 如果用户在移动设备上并且没有显示其他提示
+      if (pwa.isMobile && !showAutoConnectPrompt.value) {
+        showPWAInstallPrompt.value = true
+      } 
+      // 或者在桌面设备上用户访问次数较多时提示
+      else if (!pwa.isMobile) {
+        const visitCount = parseInt(localStorage.getItem('app_visit_count') || '0') + 1
+        localStorage.setItem('app_visit_count', visitCount.toString())
+        
+        // 第3次访问时提示安装
+        if (visitCount >= 3 && !localStorage.getItem('pwa_install_dismissed')) {
+          showPWAInstallPrompt.value = true
+        }
+      }
+    }, 3000)
+  }
+})
 </script>
