@@ -120,15 +120,25 @@ export function useMockBluetoothLock() {
       console.log('模拟蓝牙：开始开锁操作')
       
       // 对于模拟模式，我们简化验证过程
-      // 如果密钥长度为 32 字节（256位），我们使用前 6 位作为密码
-      // 如果密钥长度为 6 字节，我们直接使用
+      // 将AES密钥转换为十六进制字符串，然后取前6位作为密码
       let passwordFromKey: string
       
-      if (aesKey.length >= 6) {
-        // 将前 6 字节转换为字符串
-        passwordFromKey = Array.from(aesKey.slice(0, 6))
-          .map(byte => String.fromCharCode(byte))
+      if (aesKey.length >= 3) {
+        // 将前3字节转换为十六进制，取前6位数字作为密码
+        const hexKey = Array.from(aesKey.slice(0, 3))
+          .map(byte => byte.toString(16).padStart(2, '0'))
           .join('')
+        
+        // 取前6位数字字符作为密码
+        passwordFromKey = hexKey.slice(0, 6)
+        
+        // 确保都是数字，如果有字母则替换为数字
+        passwordFromKey = passwordFromKey.replace(/[a-f]/g, (match) => {
+          const charMap: { [key: string]: string } = {
+            'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6'
+          }
+          return charMap[match] || '0'
+        })
       } else {
         // 如果密钥太短，使用默认测试密码
         passwordFromKey = '123456'

@@ -12,6 +12,7 @@ export interface MockBluetoothDevice {
 export class MockBluetoothLock implements MockBluetoothDevice {
   private connected = false
   private correctPassword = '123456' // 模拟的正确密码
+  private validPasswordPattern = /^\d{6}$/ // 接受任何6位数字作为有效密码
 
   async connect(): Promise<boolean> {
     console.log('模拟设备：开始连接...')
@@ -39,12 +40,13 @@ export class MockBluetoothLock implements MockBluetoothDevice {
     // 模拟验证延迟
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    if (password === this.correctPassword) {
-      console.log('模拟设备：密码正确，开锁成功')
+    // 对于模拟模式，接受任何6位数字密码或默认密码
+    if (password === this.correctPassword || this.validPasswordPattern.test(password)) {
+      console.log('模拟设备：密码验证成功，开锁成功')
       return { success: true }
     } else {
-      console.log('模拟设备：密码错误')
-      return { success: false, error: '密码错误' }
+      console.log('模拟设备：密码格式无效，期望6位数字，收到:', password)
+      return { success: false, error: '密码格式无效' }
     }
   }
 
