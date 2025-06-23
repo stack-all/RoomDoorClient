@@ -2,6 +2,8 @@
   "recommendations": [
     "dprint.dprint",
     "oxc.oxc-vscode",
-    "vue.volar"
+    "vue.volar",
+    "vitest.explorer",
+    "antfu.unocss"
   ]
 }
