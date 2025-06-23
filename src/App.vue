@@ -51,9 +51,9 @@
             <svg class="biometric-icon" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 1C8.96 1 6.21 2.65 4.22 5.1C4.15 5.2 4.13 5.32 4.16 5.43C4.2 5.54 4.28 5.63 4.38 5.68L6.54 6.72C6.66 6.78 6.81 6.75 6.9 6.64C8.18 5.16 9.97 4.2 12 4.2C14.03 4.2 15.82 5.16 17.1 6.64C17.19 6.75 17.34 6.78 17.46 6.72L19.62 5.68C19.72 5.63 19.8 5.54 19.84 5.43C19.87 5.32 19.85 5.2 19.78 5.1C17.79 2.65 15.04 1 12 1M12 6C10.07 6 8.32 6.74 6.97 7.9C6.88 7.98 6.85 8.1 6.88 8.21C6.91 8.32 6.99 8.41 7.09 8.46L9.25 9.5C9.37 9.56 9.52 9.53 9.61 9.42C10.34 8.61 11.12 8.2 12 8.2C12.88 8.2 13.66 8.61 14.39 9.42C14.48 9.53 14.63 9.56 14.75 9.5L16.91 8.46C17.01 8.41 17.09 8.32 17.12 8.21C17.15 8.1 17.12 7.98 17.03 7.9C15.68 6.74 13.93 6 12 6M12 10C11.45 10 10.95 10.22 10.59 10.59C10.22 10.95 10 11.45 10 12C10 12.55 10.22 13.05 10.59 13.41C10.95 13.78 11.45 14 12 14C12.55 14 13.05 13.78 13.41 13.41C13.78 13.05 14 12.55 14 12C14 11.45 13.78 10.95 13.41 10.59C13.05 10.22 12.55 10 12 10Z"/>
             </svg>
-            {{ biometricSaveEnabled ? '✓ 已启用指纹保存密码' : '○ 启用指纹保存密码' }}
+            {{ getBiometricButtonText() }}
           </button>
-          <p class="biometric-hint">{{ biometricSaveEnabled ? '成功开锁后将通过指纹保存密码' : '启用后可用指纹代替输入密码' }}</p>
+          <p class="biometric-hint">{{ getBiometricHintText() }}</p>
         </div>
 
         <button 
@@ -107,13 +107,37 @@
       <div v-if="message" class="alert" :class="messageClass">
         {{ message }}
       </div>
-    </div>
-
-    <div class="card" v-if="lastDevice">
-      <h3 style="margin-bottom: 16px;">上次连接的设备</h3>      <div class="device-item" @click="connectToLastDevice">
+    </div>    <div class="card" v-if="lastDevice">
+      <h3 style="margin-bottom: 16px;">上次连接的设备</h3>
+      <div class="device-item" @click="connectToLastDevice">
         <div class="device-info">
           <div class="device-name">{{ lastDevice.name || '未知设备' }}</div>
         </div>
+      </div>
+    </div>
+
+    <!-- PWA安装卡片 -->
+    <div class="card" v-if="canInstall && !isInstalled">
+      <h3 style="margin-bottom: 16px;">📱 安装到设备</h3>
+      <p style="margin-bottom: 16px; color: var(--text-secondary);">
+        将蓝牙门锁安装到您的设备，享受更好的使用体验
+      </p>
+      <button @click="handleInstallPWA" class="btn btn-primary">
+        <svg class="install-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        安装应用
+      </button>
+    </div>
+
+    <!-- PWA已安装提示 -->
+    <div class="card" v-if="isInstalled">
+      <div class="pwa-installed">
+        <svg class="success-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        <h3>应用已安装</h3>
+        <p>您可以在主屏幕或应用列表中找到蓝牙门锁应用</p>
       </div>
     </div>
   </div>
@@ -124,6 +148,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useBluetooth } from './composables/useBluetooth'
 import { useBiometric } from './composables/useBiometric'
 import { useStorage } from './composables/useStorage'
+import { usePWA } from './composables/usePWA'
 
 export default {
   name: 'App',
@@ -141,19 +166,19 @@ export default {
       connectedDevice,
       challengeData,
       hasChallengeData,
-      scanDevices,
-      selectDevice,
+      scanDevices,      selectDevice,
       connect,
       disconnect,
       openDoor
-    } = useBluetooth()
+    } = useBluetooth();
 
     const {
       supportsBiometric,
       biometricSaveEnabled,
       toggleBiometricSave,
       savePasswordWithBiometric,
-      getPasswordWithBiometric
+      getPasswordWithBiometric,
+      hasPasswordSaved
     } = useBiometric()
 
     const {
@@ -162,6 +187,13 @@ export default {
       getStoredPassword,
       saveStoredPassword
     } = useStorage()
+
+    const {
+      canInstall,
+      isInstalled,
+      installPWA,
+      showManualInstallGuide
+    } = usePWA()
 
     const lastDevice = ref(null)
 
@@ -269,6 +301,41 @@ export default {
       }
     };
 
+    // 获取指纹按钮文本
+    const getBiometricButtonText = () => {
+      if (hasPasswordSaved()) {
+        return biometricSaveEnabled.value ? '✓ 指纹密码已保存' : '○ 启用指纹解锁'
+      } else {
+        return biometricSaveEnabled.value ? '⏳ 等待保存密码' : '○ 启用指纹保存密码'
+      }
+    };
+
+    // 获取指纹提示文本
+    const getBiometricHintText = () => {
+      if (hasPasswordSaved()) {
+        return biometricSaveEnabled.value ? '可以使用指纹快速连接和开锁' : '启用后可用指纹代替输入密码'
+      } else {
+        return biometricSaveEnabled.value ? '成功开锁后将通过指纹保存密码' : '启用后在开锁成功时保存密码'
+      }
+    };
+
+    // 处理PWA安装
+    const handleInstallPWA = async () => {
+      try {
+        const result = await installPWA()
+        if (result.success) {
+          showMessage(result.message, 'success')
+        } else if (result.isManual) {
+          // 显示手动安装指导
+          showMessage(result.message, 'info')
+        } else {
+          showMessage(result.message, 'warning')
+        }
+      } catch (error) {
+        showMessage('安装失败，请重试', 'error')
+      }
+    };
+
     onMounted(async () => {
       // 加载上次连接的设备
       lastDevice.value = getLastDevice()
@@ -278,9 +345,7 @@ export default {
         selectedDevice.value = lastDevice.value
         showMessage('发现上次连接的设备，您可以点击下方快速连接', 'info')
       }
-    });
-
-    return {
+    });    return {
       password,
       message,
       messageClass,
@@ -300,6 +365,8 @@ export default {
       canConnect,
       supportsBiometric,
       biometricSaveEnabled,
+      canInstall,
+      isInstalled,
       scanDevices,
       selectDevice,
       connect: connectWithPasswordSave,
@@ -308,7 +375,10 @@ export default {
       connectToLastDevice,
       toggleBiometricSave,
       showMessage,
-      clearMessage
+      clearMessage,
+      getBiometricButtonText,
+      getBiometricHintText,
+      handleInstallPWA
     }
   }
 }

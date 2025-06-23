@@ -285,6 +285,34 @@ body {
     line-height: 1.4;
 }
 
+/* PWA相关样式 */
+.install-icon, .success-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.pwa-installed {
+    text-align: center;
+    padding: 20px;
+}
+
+.pwa-installed .success-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--success-color);
+    margin-bottom: 16px;
+}
+
+.pwa-installed h3 {
+    color: var(--success-color);
+    margin-bottom: 8px;
+}
+
+.pwa-installed p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
 @media (max-width: 480px) {
     .container {
         padding: 16px;

@@ -24,8 +24,7 @@ export function useBiometric() {
             // 如果禁用了生物识别，清除保存的凭据
             clearBiometricCredentials()
         }
-    }
-    // 使用生物识别保存密码
+    }    // 使用生物识别保存密码
     const savePasswordWithBiometric = async (password) => {
         if (!supportsBiometric.value || !biometricSaveEnabled.value) {
             throw new Error('生物识别不可用')
@@ -69,10 +68,14 @@ export function useBiometric() {
                     id: credential.id,
                     rawId: Array.from(new Uint8Array(credential.rawId)),
                     password: btoa(password), // Base64编码密码
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    // 添加密码验证标识
+                    passwordHash: await hashPassword(password)
                 }
 
                 localStorage.setItem('biometric_credential', JSON.stringify(credentialData))
+                // 标记密码已通过指纹保存
+                localStorage.setItem('biometric_password_saved', 'true')
                 return true
             }
         } catch (error) {
@@ -88,8 +91,7 @@ export function useBiometric() {
                 throw new Error('生物识别保存失败，请稍后重试')
             }
         }
-    }
-    // 使用生物识别获取密码
+    }    // 使用生物识别获取密码
     const getPasswordWithBiometric = async () => {
         if (!supportsBiometric.value || !biometricSaveEnabled.value) {
             throw new Error('生物识别不可用')
@@ -97,7 +99,7 @@ export function useBiometric() {
 
         const credentialData = localStorage.getItem('biometric_credential')
         if (!credentialData) {
-            throw new Error('未找到生物识别凭据')
+            throw new Error('未找到生物识别凭据，请先成功开锁一次以保存密码')
         }
 
         try {
@@ -123,7 +125,17 @@ export function useBiometric() {
 
             if (assertion) {
                 // 验证成功，返回密码
-                return atob(data.password)
+                const password = atob(data.password)
+                
+                // 验证密码完整性（如果有hash）
+                if (data.passwordHash) {
+                    const currentHash = await hashPassword(password)
+                    if (currentHash !== data.passwordHash) {
+                        throw new Error('密码数据已损坏，请重新保存')
+                    }
+                }
+                
+                return password
             }
         } catch (error) {
             console.error('生物识别验证失败:', error)
@@ -138,11 +150,25 @@ export function useBiometric() {
                 throw new Error('生物识别验证失败，请重试')
             }
         }
-    }
-
-    // 清除生物识别凭据
+    }    // 清除生物识别凭据
     const clearBiometricCredentials = () => {
         localStorage.removeItem('biometric_credential')
+        localStorage.removeItem('biometric_password_saved')
+    }
+
+    // 密码哈希函数（用于验证密码完整性）
+    const hashPassword = async (password) => {
+        const encoder = new TextEncoder()
+        const data = encoder.encode(password + 'door-lock-salt')
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    }
+
+    // 检查是否已保存密码
+    const hasPasswordSaved = () => {
+        return localStorage.getItem('biometric_password_saved') === 'true' && 
+               localStorage.getItem('biometric_credential') !== null
     }
 
     // 初始化检查
@@ -154,6 +180,7 @@ export function useBiometric() {
         toggleBiometricSave,
         savePasswordWithBiometric,
         getPasswordWithBiometric,
-        clearBiometricCredentials
+        clearBiometricCredentials,
+        hasPasswordSaved
     }
 }
