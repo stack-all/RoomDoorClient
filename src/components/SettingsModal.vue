@@ -199,21 +199,8 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">应用设置</h3>
             
             <div class="space-y-4">
-              <!-- PWA 安装状态 -->
-              <div v-if="pwa.isStandalone" class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span class="text-sm text-green-800 font-medium">已安装为应用</span>
-                </div>
-                <p class="text-xs text-green-600 mt-1">
-                  您正在使用已安装的应用版本，享受完整的原生体验。
-                </p>
-              </div>
-
-              <!-- PWA 安装按钮 -->
-              <div v-else-if="pwa.canInstall" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <!-- PWA 安装 -->
+              <div v-if="pwa.canInstall" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
                     <div class="flex items-center mb-2">
@@ -236,29 +223,6 @@
                 </button>
               </div>
 
-              <!-- PWA 手动安装指导 -->
-              <div v-else class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div class="flex items-start">
-                  <svg class="w-5 h-5 text-gray-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800 mb-2">
-                      手动安装指导 ({{ installGuide.browser }})
-                    </p>
-                    <ol class="text-xs text-gray-600 space-y-1">
-                      <li v-for="(step, index) in installGuide.steps" :key="index" class="flex items-start">
-                        <span class="inline-block w-4 h-4 bg-gray-400 text-white text-xs rounded-full text-center leading-4 mr-2 mt-0.5 flex-shrink-0">{{ index + 1 }}</span>
-                        <span>{{ step }}</span>
-                      </li>
-                    </ol>
-                    <div v-if="pwa.isMobile" class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-                      💡 提示：安装后可以像原生应用一样使用，支持离线访问和推送通知。
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <!-- PWA 功能介绍 -->
               <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div class="flex items-start">
@@ -272,7 +236,6 @@
                       <li>• 📱 添加到主屏幕，便捷访问</li>
                       <li>• 🔗 支持深度链接和快捷方式</li>
                       <li>• 💾 离线缓存，无网络时也能使用基本功能</li>
-                      <li v-if="pwa.isMobile">• 📳 支持推送通知（即将支持）</li>
                     </ul>
                   </div>
                 </div>
@@ -344,10 +307,6 @@ const savedDevices = ref<Array<{id: string, name?: string, savedAt: number}>>([]
 // 计算属性
 const buildTime = computed(() => {
   return new Date().toLocaleDateString('zh-CN')
-})
-
-const installGuide = computed(() => {
-  return pwa.getInstallGuide()
 })
 
 // 方法

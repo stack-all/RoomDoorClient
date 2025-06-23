@@ -98,7 +98,7 @@ export function useBiometrics() {
       const tempKey = await crypto.subtle.importKey(
         'raw',
         keyToWrap,
-        { name: 'AES-ECB' },
+        { name: 'AES-GCM' },
         true,
         ['encrypt', 'decrypt']
       )

@@ -24,6 +24,7 @@ export default defineConfig(({ command, mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}']
         },
+        manifestFilename: 'manifest.json',
         manifest: {
           name: '智能门锁控制面板',
           short_name: '门锁控制',
@@ -55,8 +56,8 @@ export default defineConfig(({ command, mode }) => {
               ]
             }
           ]
-      }
-    })
+        }
+      })
   ],
   resolve: {
     alias: {

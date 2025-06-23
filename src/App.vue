@@ -93,7 +93,7 @@
       </div>
 
       <!-- PWA 安装提示 -->
-      <div v-if="showPWAInstallPrompt && pwa.canInstall && !pwa.isStandalone" class="card mb-6 bg-green-50 border-green-200">
+      <div v-if="pwa.canInstall" class="card mb-6 bg-green-50 border-green-200">
         <div class="flex items-start">
           <svg class="w-6 h-6 text-green-600 mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -111,7 +111,7 @@
                 立即安装
               </button>
               <button
-                @click="handleDismissPWAPrompt"
+                @click="() => { pwa.canInstall.value = false }"
                 class="px-3 py-1 text-green-600 hover:text-green-800 text-sm"
               >
                 稍后
@@ -254,65 +254,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 调试信息 -->
-      <div class="card bg-gray-50 border-gray-200 mt-4" v-if="showDebug">
-        <h3 class="font-medium text-gray-900 mb-3">调试信息</h3>
-        <div class="space-y-2 text-sm text-gray-600">
-          <div>连接状态: {{ lockStore.isConnected ? '已连接' : '未连接' }}</div>
-          <div>连接中: {{ lockStore.isConnecting ? '是' : '否' }}</div>
-          <div>可以开锁: {{ lockStore.canUnlock ? '是' : '否' }}</div>
-          <div>有挑战: {{ lockStore.bluetooth?.hasChallenge ? '是' : '否' }}</div>
-          <div>正在开锁: {{ lockStore.lockState.isUnlocking ? '是' : '否' }}</div>
-          <div>设备信息: {{ lockStore.bluetooth?.connectionState.value?.device?.name || '无' }}</div>
-          <div>按钮禁用: {{ !password.trim() || !lockStore.canUnlock || lockStore.lockState.isUnlocking ? '是' : '否' }}</div>
-          <div>密码长度: {{ password.trim().length }}</div>
-          <div>新版蓝牙API支持: {{ lockStore.bluetooth?.checkWebBluetoothSupport?.() ? '是' : '否' }}</div>
-          <div>自动连接设置: {{ lockStore.deviceSettings.autoConnect ? '已启用' : '未启用' }}</div>
-          <div>广告监听: {{ lockStore.bluetooth?.isWatchingAdvertisements ? '运行中' : '未运行' }}</div>
-          <div>自动重连: {{ lockStore.bluetooth?.autoReconnectEnabled ? '已启用' : '未启用' }}</div>
-          <div>PWA可安装: {{ pwa.canInstall ? '是' : '否' }}</div>
-          <div>PWA已安装: {{ pwa.isInstalled ? '是' : '否' }}</div>
-          <div>PWA独立模式: {{ pwa.isStandalone ? '是' : '否' }}</div>
-          <div>PWA安装提示: {{ pwa.canInstall ? '有' : '无' }}</div>
-        </div>
-        <div class="mt-3 space-x-2 flex flex-wrap gap-2">
-          <button @click="handleRequestChallenge" class="px-3 py-1 bg-blue-500 text-white rounded text-xs">
-            请求挑战
-          </button>
-          <button @click="handleResetState" class="px-3 py-1 bg-red-500 text-white rounded text-xs">
-            重置状态
-          </button>
-          <button @click="handleCheckDevices" class="px-3 py-1 bg-green-500 text-white rounded text-xs">
-            检查设备
-          </button>
-          <button 
-            v-if="lockStore.bluetooth?.checkWebBluetoothSupport?.()"
-            @click="handleToggleAdvertisementWatching" 
-            :class="{
-              'px-3 py-1 text-white rounded text-xs': true,
-              'bg-orange-500': !lockStore.bluetooth?.isWatchingAdvertisements,
-              'bg-purple-500': lockStore.bluetooth?.isWatchingAdvertisements
-            }"
-          >
-            {{ lockStore.bluetooth?.isWatchingAdvertisements ? '停止监听' : '启动监听' }}
-          </button>
-          <button @click="pwa.resetInstallState" class="px-3 py-1 bg-pink-500 text-white rounded text-xs">
-            重置PWA
-          </button>
-          <a href="/test-bluetooth.html" target="_blank" class="px-3 py-1 bg-gray-500 text-white rounded text-xs inline-block">
-            测试蓝牙
-          </a>
-        </div>
-      </div>
-      
-      <!-- 调试开关 -->
-      <button 
-        @click="showDebug = !showDebug" 
-        class="fixed bottom-4 right-4 w-12 h-12 bg-gray-800 text-white rounded-full opacity-20 hover:opacity-60 transition-opacity"
-      >
-        🐛
-      </button>
     </main>
 
     <!-- 设置模态框 -->
@@ -338,10 +279,8 @@ const lockStore = useLockStore()
 const pwa = usePWA()
 const password = ref('')
 const showSettings = ref(false)
-const showDebug = ref(true) // 暂时默认显示调试信息
 const showQuickUnlock = ref(false) // 显示一键开锁按钮
 const showAutoConnectPrompt = ref(false) // 显示自动连接提示
-const showPWAInstallPrompt = ref(false) // 显示PWA安装提示
 const deviceInfoRef = ref() // 设备信息组件引用
 
 // 计算属性
@@ -361,84 +300,29 @@ const handleDisconnect = () => {
 }
 
 const handlePasswordUnlock = async () => {
-  console.log('handlePasswordUnlock called', {
-    password: password.value.trim(),
-    canUnlock: lockStore.canUnlock,
-    isUnlocking: lockStore.lockState.isUnlocking,
-    isConnected: lockStore.isConnected
-  })
-  
   if (!password.value.trim()) {
-    console.log('密码为空，停止执行')
     return
   }
   
   if (!lockStore.canUnlock) {
-    console.log('不能开锁，状态:', {
-      isConnected: lockStore.isConnected,
-      hasChallenge: lockStore.bluetooth?.hasChallenge,
-      canUnlock: lockStore.canUnlock
-    })
     return
   }
   
-  console.log('开始密码开锁...')
   const result = await lockStore.unlockWithPassword(password.value)
-  console.log('开锁结果:', result)
-  password.value = '' // 清空密码输入
+  if (result.success) {
+    password.value = '' // 清空密码输入
+  }
 }
 
 const handleBiometricUnlock = async () => {
   await lockStore.unlockWithBiometrics()
 }
 
-const handleRequestChallenge = async () => {
-  console.log('手动请求挑战')
-  await lockStore.bluetooth?.requestNewChallenge()
-}
-
-const handleResetState = () => {
-  console.log('重置应用状态')
-  lockStore.disconnect()
-  password.value = ''
-}
-
 const handleQuickUnlock = async () => {
-  console.log('一键开锁触发')
   const result = await lockStore.autoUnlock()
   
   if (result.success) {
     showQuickUnlock.value = false
-  }
-}
-
-const handleCheckDevices = async () => {
-  if (!lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
-    console.log('不支持新版蓝牙API')
-    return
-  }
-  
-  // 显示设备信息组件
-  deviceInfoRef.value?.show()
-}
-
-const handleToggleAdvertisementWatching = async () => {
-  if (!lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
-    console.log('不支持新版蓝牙API')
-    return
-  }
-  
-  if (lockStore.bluetooth.isWatchingAdvertisements) {
-    console.log('停止广告监听')
-    lockStore.bluetooth.stopAdvertisementWatching()
-  } else {
-    console.log('启动广告监听')
-    const success = await lockStore.bluetooth.startAdvertisementWatching()
-    if (success) {
-      console.log('广告监听启动成功')
-    } else {
-      console.log('广告监听启动失败')
-    }
   }
 }
 
@@ -448,23 +332,16 @@ const handleInstallPWA = async () => {
     
     if (success) {
       lockStore.toast.success('应用安装成功！')
-      showPWAInstallPrompt.value = false
     } else {
       lockStore.toast.info('安装已取消')
     }
   } catch (err) {
-    console.error('PWA 安装失败:', err)
     lockStore.toast.error('安装失败，请手动添加到主屏幕')
   }
 }
 
 const handleOpenChromeFlags = () => {
   window.open('chrome://flags/#enable-web-bluetooth-new-permissions-backend', '_blank')
-}
-
-const handleDismissPWAPrompt = () => {
-  showPWAInstallPrompt.value = false
-  localStorage.setItem('pwa_install_dismissed', 'true')
 }
 
 const formatTime = (timestamp: number | null): string => {
@@ -504,34 +381,6 @@ onMounted(() => {
         }
       }
     }, 1000)
-  }
-  
-  // 检查新版蓝牙API支持情况
-  if (lockStore.bluetooth?.checkWebBluetoothSupport?.()) {
-    console.log('✅ 已启用新版Web Bluetooth权限后端，支持设备记忆和自动重连')
-  } else {
-    console.log('⚠️ 未启用新版Web Bluetooth权限后端，建议在chrome://flags启用')
-  }
-
-  // PWA 安装提示逻辑
-  if (pwa.canInstall && !pwa.isStandalone) {
-    // 延迟显示 PWA 安装提示，避免与自动连接提示冲突
-    setTimeout(() => {
-      // 如果用户在移动设备上并且没有显示其他提示
-      if (pwa.isMobile && !showAutoConnectPrompt.value) {
-        showPWAInstallPrompt.value = true
-      } 
-      // 或者在桌面设备上用户访问次数较多时提示
-      else if (!pwa.isMobile) {
-        const visitCount = parseInt(localStorage.getItem('app_visit_count') || '0') + 1
-        localStorage.setItem('app_visit_count', visitCount.toString())
-        
-        // 第3次访问时提示安装
-        if (visitCount >= 3 && !localStorage.getItem('pwa_install_dismissed')) {
-          showPWAInstallPrompt.value = true
-        }
-      }
-    }, 3000)
   }
 })
 </script>
