@@ -1,0 +1,39 @@
+{
+  "name": "room-door-client",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "dprint fmt",
+    "build:gh-pages": "GITHUB_PAGES=true bun run build",
+    "deploy:gh-pages": "./scripts/deploy-gh-pages.sh",
+    "preview:gh-pages": "cd dist && python -m http.server 8080"
+  },
+  "dependencies": {
+    "@vueuse/core": "^13.4.0",
+    "crypto-js": "^4.2.0",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.4",
+    "@types/crypto-js": "^4.2.2",
+    "@vitejs/plugin-vue": "^5.0.2",
+    "@vue/test-utils": "^2.4.3",
+    "dprint": "^0.50.0",
+    "happy-dom": "^18.0.1",
+    "lightningcss": "^1.22.1",
+    "typescript": "^5.8.3",
+    "unocss": "^66.2.3",
+    "vite": "^6.3.5",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^2.2.10"
+  }
+}

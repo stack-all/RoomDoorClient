@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#1976d2" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="智能门锁" />
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="基于蓝牙的智能门锁PWA控制面板，支持生物识别和离线使用" />
+  <meta name="keywords" content="智能门锁,蓝牙,PWA,生物识别,离线" />
+  <meta name="author" content="Smart Door Lock Team" />
+  
+  <!-- Apple Touch Icons (使用 emoji 作为图标) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>" />
+  
+  <title>智能门锁控制面板</title>
+  
+  <!-- 内联关键CSS以提升首屏渲染 -->
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      min-height: 100vh;
+    }
+    
+    #app {
+      min-height: 100vh;
+    }
+    
+    /* 加载状态 */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #1976d2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    /* 离线样式 */
+    body.offline::before {
+      content: '离线模式';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #f59e0b;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 加载状态 -->
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">正在加载智能门锁控制面板...</div>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+  
+  <!-- 预加载关键资源 -->
+  <script type="modulepreload" src="/src/App.vue"></script>
+  <script type="modulepreload" src="/src/stores/lockStore.ts"></script>
+  <script type="modulepreload" src="/src/composables/useBluetoothLock.ts"></script>
+</body>
+</html>
