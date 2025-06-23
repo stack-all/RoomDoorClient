@@ -69,6 +69,22 @@ describe('usePWA Composable', () => {
       
       expect(typeof pwa.install).toBe('function')
       expect(typeof pwa.getInstallGuide).toBe('function')
+      expect(typeof pwa.resetInstallState).toBe('function')
+    })
+
+    it('应该能够重置安装状态', () => {
+      const pwa = usePWA()
+      
+      // 模拟已安装状态
+      pwa.isInstalled.value = true
+      pwa.canInstall.value = true
+      
+      // 调用重置方法
+      pwa.resetInstallState()
+      
+      // 验证状态已重置
+      expect(pwa.isInstalled.value).toBe(false)
+      expect(pwa.canInstall.value).toBe(false)
     })
   })
 
