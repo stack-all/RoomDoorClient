@@ -73,67 +73,67 @@ export function useBluetooth() {
         selectedDevice.value = device
     }
 
-  // 连接设备
-  const connect = async (password) => {
-    if (!selectedDevice.value) {
-      throw new Error('请先选择设备')
-    }
-
-    isConnecting.value = true
-
-    try {
-      bluetoothDevice = selectedDevice.value.device || await navigator.bluetooth.requestDevice({
-        filters: [{ services: [SERVICE_UUID] }],
-        optionalServices: [SERVICE_UUID]
-      })
-
-      // 连接GATT服务器
-      gattServer = await bluetoothDevice.gatt.connect()
-      
-      // 获取服务
-      service = await gattServer.getPrimaryService(SERVICE_UUID)
-      
-      // 获取特征
-      responseCharacteristic = await service.getCharacteristic(RESPONSE_CHARACTERISTIC_UUID)
-      challengeCharacteristic = await service.getCharacteristic(CHALLENGE_CHARACTERISTIC_UUID)
-      
-      // 监听挑战特征的通知
-      await challengeCharacteristic.startNotifications()
-      challengeCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
-        currentChallenge = new Uint8Array(event.target.value.buffer)
-        console.log('收到新挑战数据:', Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
-      })
-
-      // 监听断开连接事件
-      bluetoothDevice.addEventListener('gattserverdisconnected', () => {
-        isConnected.value = false
-        connectedDevice.value = null
-        currentChallenge = null
-        console.log('蓝牙设备已断开连接')
-      })
-
-      // 连接成功后，尝试读取当前挑战数据
-      try {
-        const initialChallenge = await challengeCharacteristic.readValue()
-        if (initialChallenge && initialChallenge.byteLength > 0) {
-          currentChallenge = new Uint8Array(initialChallenge.buffer)
-          console.log('读取到初始挑战数据:', Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
+    // 连接设备
+    const connect = async (password) => {
+        if (!selectedDevice.value) {
+            throw new Error('请先选择设备')
         }
-      } catch (readError) {
-        console.log('无法读取初始挑战数据，等待通知:', readError.message)
-      }
 
-      isConnected.value = true
-      connectedDevice.value = selectedDevice.value
-      
-      return true
-    } catch (error) {
-      console.error('连接失败:', error)
-      throw new Error('连接失败: ' + error.message)
-    } finally {
-      isConnecting.value = false
+        isConnecting.value = true
+
+        try {
+            bluetoothDevice = selectedDevice.value.device || await navigator.bluetooth.requestDevice({
+                filters: [{ services: [SERVICE_UUID] }],
+                optionalServices: [SERVICE_UUID]
+            })
+
+            // 连接GATT服务器
+            gattServer = await bluetoothDevice.gatt.connect()
+
+            // 获取服务
+            service = await gattServer.getPrimaryService(SERVICE_UUID)
+
+            // 获取特征
+            responseCharacteristic = await service.getCharacteristic(RESPONSE_CHARACTERISTIC_UUID)
+            challengeCharacteristic = await service.getCharacteristic(CHALLENGE_CHARACTERISTIC_UUID)
+
+            // 监听挑战特征的通知
+            await challengeCharacteristic.startNotifications()
+            challengeCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                currentChallenge = new Uint8Array(event.target.value.buffer)
+                console.log('收到新挑战数据:', Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
+            })
+
+            // 监听断开连接事件
+            bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+                isConnected.value = false
+                connectedDevice.value = null
+                currentChallenge = null
+                console.log('蓝牙设备已断开连接')
+            })
+
+            // 连接成功后，尝试读取当前挑战数据
+            try {
+                const initialChallenge = await challengeCharacteristic.readValue()
+                if (initialChallenge && initialChallenge.byteLength > 0) {
+                    currentChallenge = new Uint8Array(initialChallenge.buffer)
+                    console.log('读取到初始挑战数据:', Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
+                }
+            } catch (readError) {
+                console.log('无法读取初始挑战数据，等待通知:', readError.message)
+            }
+
+            isConnected.value = true
+            connectedDevice.value = selectedDevice.value
+
+            return true
+        } catch (error) {
+            console.error('连接失败:', error)
+            throw new Error('连接失败: ' + error.message)
+        } finally {
+            isConnecting.value = false
+        }
     }
-  }
 
     // 断开连接
     const disconnect = async () => {
@@ -177,95 +177,95 @@ export function useBluetooth() {
         return Uint8Array.from(atob(encryptedBytes), c => c.charCodeAt(0))
     }
 
-  // 等待挑战数据
-  const waitForChallenge = async (timeoutMs = 5000) => {
-    return new Promise((resolve, reject) => {
-      if (currentChallenge) {
-        resolve(currentChallenge)
-        return
-      }
+    // 等待挑战数据
+    const waitForChallenge = async (timeoutMs = 5000) => {
+        return new Promise((resolve, reject) => {
+            if (currentChallenge) {
+                resolve(currentChallenge)
+                return
+            }
 
-      const timeout = setTimeout(() => {
-        reject(new Error('等待挑战数据超时'))
-      }, timeoutMs)
+            const timeout = setTimeout(() => {
+                reject(new Error('等待挑战数据超时'))
+            }, timeoutMs)
 
-      // 监听挑战数据更新
-      const checkChallenge = () => {
-        if (currentChallenge) {
-          clearTimeout(timeout)
-          resolve(currentChallenge)
-        } else {
-          setTimeout(checkChallenge, 100)
+            // 监听挑战数据更新
+            const checkChallenge = () => {
+                if (currentChallenge) {
+                    clearTimeout(timeout)
+                    resolve(currentChallenge)
+                } else {
+                    setTimeout(checkChallenge, 100)
+                }
+            }
+            checkChallenge()
+        })
+    }
+
+    // 开门
+    const openDoor = async (password) => {
+        if (!isConnected.value || !responseCharacteristic) {
+            throw new Error('设备未连接')
         }
-      }
-      checkChallenge()
+
+        isUnlocking.value = true
+
+        try {
+            // 等待挑战数据（如果当前没有）
+            let challengeData = currentChallenge
+            if (!challengeData) {
+                console.log('等待挑战数据...')
+                challengeData = await waitForChallenge(10000) // 等待10秒
+            }
+
+            console.log('使用挑战数据:', Array.from(challengeData).map(b => b.toString(16).padStart(2, '0')).join(''))
+
+            // 使用AES加密挑战数据
+            const encryptedChallenge = aesEncrypt(challengeData, password)
+
+            console.log('发送加密响应:', Array.from(encryptedChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
+
+            // 发送加密的挑战响应
+            await responseCharacteristic.writeValue(encryptedChallenge)
+
+            // 等待一段时间让门锁处理
+            await new Promise(resolve => setTimeout(resolve, 2000))
+
+            return true
+        } catch (error) {
+            console.error('开门失败:', error)
+            if (error.message.includes('等待挑战数据超时')) {
+                throw new Error('未收到门锁挑战数据，请检查连接状态')
+            }
+            throw new Error('开门失败: ' + error.message)
+        } finally {
+            isUnlocking.value = false
+        }
+    }  // 获取当前挑战数据的响应式状态
+    const challengeData = computed(() => {
+        if (!currentChallenge) return null
+        return Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join('')
     })
-  }
 
-  // 开门
-  const openDoor = async (password) => {
-    if (!isConnected.value || !responseCharacteristic) {
-      throw new Error('设备未连接')
+    const hasChallengeData = computed(() => {
+        return currentChallenge !== null && currentChallenge.length > 0
+    })
+
+    return {
+        isConnected,
+        isConnecting,
+        isScanning,
+        isUnlocking,
+        devices,
+        selectedDevice,
+        connectedDevice,
+        challengeData,
+        hasChallengeData,
+        scanDevices,
+        selectDevice,
+        connect,
+        disconnect,
+        openDoor,
+        isBluetoothSupported
     }
-
-    isUnlocking.value = true
-
-    try {
-      // 等待挑战数据（如果当前没有）
-      let challengeData = currentChallenge
-      if (!challengeData) {
-        console.log('等待挑战数据...')
-        challengeData = await waitForChallenge(10000) // 等待10秒
-      }
-
-      console.log('使用挑战数据:', Array.from(challengeData).map(b => b.toString(16).padStart(2, '0')).join(''))
-
-      // 使用AES加密挑战数据
-      const encryptedChallenge = aesEncrypt(challengeData, password)
-      
-      console.log('发送加密响应:', Array.from(encryptedChallenge).map(b => b.toString(16).padStart(2, '0')).join(''))
-      
-      // 发送加密的挑战响应
-      await responseCharacteristic.writeValue(encryptedChallenge)
-      
-      // 等待一段时间让门锁处理
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      return true
-    } catch (error) {
-      console.error('开门失败:', error)
-      if (error.message.includes('等待挑战数据超时')) {
-        throw new Error('未收到门锁挑战数据，请检查连接状态')
-      }
-      throw new Error('开门失败: ' + error.message)
-    } finally {
-      isUnlocking.value = false
-    }
-  }  // 获取当前挑战数据的响应式状态
-  const challengeData = computed(() => {
-    if (!currentChallenge) return null
-    return Array.from(currentChallenge).map(b => b.toString(16).padStart(2, '0')).join('')
-  })
-
-  const hasChallengeData = computed(() => {
-    return currentChallenge !== null && currentChallenge.length > 0
-  })
-
-  return {
-    isConnected,
-    isConnecting,
-    isScanning,
-    isUnlocking,
-    devices,
-    selectedDevice,
-    connectedDevice,
-    challengeData,
-    hasChallengeData,
-    scanDevices,
-    selectDevice,
-    connect,
-    disconnect,
-    openDoor,
-    isBluetoothSupported
-  }
 }

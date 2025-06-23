@@ -254,26 +254,35 @@ body {
 }
 
 .biometric-icon {
-  width: 24px;
-  height: 24px;
+    width: 24px;
+    height: 24px;
 }
 
 .challenge-status {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  font-weight: 500;
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 500;
 }
 
 .challenge-data {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 8px;
-  border-radius: 6px;
-  word-break: break-all;
-  border: 1px solid var(--border-color);
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 8px;
+    border-radius: 6px;
+    word-break: break-all;
+    border: 1px solid var(--border-color);
+}
+
+/* 指纹提示样式 */
+.biometric-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    text-align: center;
+    line-height: 1.4;
 }
 
 @media (max-width: 480px) {
