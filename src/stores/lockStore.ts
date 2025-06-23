@@ -1,12 +1,12 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { LockState, AuthMode, DeviceSettings, UnlockResult } from '@/types'
+import { useBiometrics } from '@/composables/useBiometrics'
 import { useBluetoothLock } from '@/composables/useBluetoothLock'
 import { useMockBluetoothLock } from '@/composables/useMockBluetoothLock'
-import { useBiometrics } from '@/composables/useBiometrics'
 import { useToast } from '@/composables/useToast'
 import { deriveKey } from '@/services/crypto'
+import type { AuthMode, DeviceSettings, LockState, UnlockResult } from '@/types'
 import { wordArrayToUint8Array } from '@/utils/arrayBuffer'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 const SETTINGS_STORAGE_KEY = 'door_lock_settings'
 
@@ -20,19 +20,19 @@ export const useLockStore = defineStore('lock', () => {
       isConnected: false,
       isConnecting: false,
       device: null,
-      error: null
-    }
+      error: null,
+    },
   })
 
   const authMode = ref<AuthMode>({
     type: 'manual',
-    isEnabled: true
+    isEnabled: true,
   })
 
   const deviceSettings = ref<DeviceSettings>({
     autoConnect: false,
     biometricEnabled: false,
-    mockMode: false
+    mockMode: false,
   })
 
   // 连接控制配置
@@ -40,7 +40,7 @@ export const useLockStore = defineStore('lock', () => {
     maxRetryAttempts: 3,
     retryDelay: 2000,
     autoConnectDelay: 1000,
-    advertisementDebounce: 500
+    advertisementDebounce: 500,
   })
 
   // 组合式函数
@@ -63,7 +63,7 @@ export const useLockStore = defineStore('lock', () => {
       if (stored) {
         const settings = JSON.parse(stored) as DeviceSettings
         deviceSettings.value = { ...deviceSettings.value, ...settings }
-        
+
         if (settings.biometricEnabled && biometrics.isSupported.value) {
           authMode.value.type = 'biometric'
         }
@@ -86,13 +86,13 @@ export const useLockStore = defineStore('lock', () => {
         console.log('尝试自动连接...')
         toast.info('正在尝试自动连接设备...')
       }
-      
+
       // 首先尝试已授权设备（不弹窗）
       const success = await bluetooth.value.connectToAuthorizedDevice()
-      
+
       if (success) {
         if (!silent) toast.success('自动连接成功！')
-        
+
         // 启动广告监听
         if (bluetooth.value.checkWebBluetoothSupport()) {
           setTimeout(() => {
@@ -131,10 +131,10 @@ export const useLockStore = defineStore('lock', () => {
     try {
       isInitializing = true
       console.log('初始化自动重连功能...')
-      
+
       // 检查是否应该自动启动广告监听（这个方法内部不会触发连接）
       await bluetooth.value.checkAutoStartWatching()
-      
+
       // 如果当前未连接且广告监听未启动，尝试一次自动连接
       if (!isConnected.value && !bluetooth.value.isWatchingAdvertisements.value) {
         setTimeout(() => autoConnect(true), 1000) // 静默模式
@@ -161,18 +161,18 @@ export const useLockStore = defineStore('lock', () => {
     try {
       lockState.value.connectionState.isConnecting = true
       const success = await bluetooth.value.connect()
-      
+
       if (success) {
         lockState.value.connectionState = {
           isConnected: true,
           isConnecting: false,
           device: bluetooth.value.connectionState.value.device,
-          error: null
+          error: null,
         }
         toast.success('设备连接成功')
         return true
       }
-      
+
       lockState.value.connectionState = bluetooth.value.connectionState.value
       toast.error(bluetooth.value.connectionState.value.error || '连接失败')
       return false
@@ -182,7 +182,7 @@ export const useLockStore = defineStore('lock', () => {
         isConnected: false,
         isConnecting: false,
         device: null,
-        error
+        error,
       }
       toast.error(error)
       return false
@@ -198,7 +198,7 @@ export const useLockStore = defineStore('lock', () => {
       isConnected: false,
       isConnecting: false,
       device: null,
-      error: null
+      error: null,
     }
     lockState.value.isUnlocked = false
     toast.info('设备已断开连接')
@@ -229,7 +229,7 @@ export const useLockStore = defineStore('lock', () => {
         lockState.value.isUnlocked = true
         lockState.value.lastUnlockTime = result.timestamp
         toast.success('开锁成功！')
-        
+
         // 5秒后重置状态
         setTimeout(() => {
           lockState.value.isUnlocked = false
@@ -270,7 +270,7 @@ export const useLockStore = defineStore('lock', () => {
 
       // 生物识别认证并获取密钥
       const keyBytes = await biometrics.authenticateAndUnwrap()
-      
+
       if (!keyBytes) {
         const error = '生物识别认证失败'
         toast.error(error)
@@ -284,7 +284,7 @@ export const useLockStore = defineStore('lock', () => {
         lockState.value.isUnlocked = true
         lockState.value.lastUnlockTime = result.timestamp
         toast.success('开锁成功！')
-        
+
         // 5秒后重置状态
         setTimeout(() => {
           lockState.value.isUnlocked = false
@@ -314,7 +314,7 @@ export const useLockStore = defineStore('lock', () => {
 
     try {
       toast.info('正在注册生物识别...')
-      
+
       // 派生密钥
       const keyWordArray = deriveKey(password)
       const keyBytes = wordArrayToUint8Array(keyWordArray)
@@ -357,7 +357,7 @@ export const useLockStore = defineStore('lock', () => {
       if (!connected) {
         return { success: false, error: '无法连接到设备', timestamp: Date.now() }
       }
-      
+
       // 等待挑战数据
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
@@ -439,7 +439,7 @@ export const useLockStore = defineStore('lock', () => {
       initializeAutoReconnect()
     }, 500)
   }
-  
+
   // 延迟初始化自动重连，确保页面加载完成
   if (typeof window !== 'undefined') {
     setTimeout(() => initializeAutoReconnect(), 1000)
@@ -450,13 +450,13 @@ export const useLockStore = defineStore('lock', () => {
     lockState: computed(() => lockState.value),
     authMode: computed(() => authMode.value),
     deviceSettings: computed(() => deviceSettings.value),
-    
+
     // 计算属性
     isConnected,
     isConnecting,
     canUnlock,
     connectionError,
-    
+
     // 方法
     connect,
     disconnect,
@@ -471,10 +471,10 @@ export const useLockStore = defineStore('lock', () => {
     smartConnectControl,
     startAutoReconnect,
     stopAutoReconnect,
-    
+
     // 组合式函数
     bluetooth,
     biometrics,
-    toast
+    toast,
   }
 })

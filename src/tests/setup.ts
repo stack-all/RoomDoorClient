@@ -33,15 +33,15 @@ Object.defineProperty(navigator, 'bluetooth', {
               stopNotifications: vi.fn().mockResolvedValue(undefined),
               addEventListener: vi.fn(),
               removeEventListener: vi.fn(),
-            })
-          })
+            }),
+          }),
         }),
-        disconnect: vi.fn()
+        disconnect: vi.fn(),
       },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    })
-  }
+    }),
+  },
 })
 
 // Mock Web Crypto API
@@ -59,8 +59,8 @@ Object.defineProperty(global, 'crypto', {
       exportKey: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
       wrapKey: vi.fn().mockResolvedValue(new ArrayBuffer(48)),
       unwrapKey: vi.fn().mockResolvedValue({}),
-    }
-  }
+    },
+  },
 })
 
 // Mock Web Authentication API
@@ -72,8 +72,8 @@ Object.defineProperty(navigator, 'credentials', {
       rawId: new ArrayBuffer(16),
       response: {
         clientDataJSON: new ArrayBuffer(100),
-        attestationObject: new ArrayBuffer(200)
-      }
+        attestationObject: new ArrayBuffer(200),
+      },
     }),
     get: vi.fn().mockResolvedValue({
       id: 'test-credential',
@@ -82,17 +82,17 @@ Object.defineProperty(navigator, 'credentials', {
         clientDataJSON: new ArrayBuffer(100),
         authenticatorData: new ArrayBuffer(37),
         signature: new ArrayBuffer(64),
-        userHandle: new ArrayBuffer(16)
-      }
-    })
-  }
+        userHandle: new ArrayBuffer(16),
+      },
+    }),
+  },
 })
 
 // Mock PublicKeyCredential
 Object.defineProperty(global, 'PublicKeyCredential', {
   value: {
-    isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true)
-  }
+    isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+  },
 })
 
 // Mock localStorage
@@ -101,8 +101,8 @@ Object.defineProperty(global, 'localStorage', {
     getItem: vi.fn(),
     setItem: vi.fn(),
     removeItem: vi.fn(),
-    clear: vi.fn()
-  }
+    clear: vi.fn(),
+  },
 })
 
 // Mock Notification API
@@ -110,11 +110,11 @@ Object.defineProperty(global, 'Notification', {
   value: class MockNotification {
     static permission = 'granted'
     static requestPermission = vi.fn().mockResolvedValue('granted')
-    
+
     constructor(title: string, options?: NotificationOptions) {
       console.log('Mock notification:', title, options)
     }
-  }
+  },
 })
 
 // Mock console methods in tests

@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[]
@@ -46,7 +46,7 @@ export function usePWA() {
     try {
       await installPrompt.value.prompt()
       const result = await installPrompt.value.userChoice
-      
+
       if (result.outcome === 'accepted') {
         canInstall.value = false
         installPrompt.value = null
@@ -64,6 +64,6 @@ export function usePWA() {
 
   return {
     canInstall,
-    install
+    install,
   }
 }

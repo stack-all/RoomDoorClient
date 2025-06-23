@@ -1,6 +1,6 @@
-import { ref, computed } from 'vue'
 import type { BiometricCredential } from '@/types'
-import { generateRandomBytes, uint8ArrayToHex, hexToUint8Array } from '@/utils/arrayBuffer'
+import { generateRandomBytes, hexToUint8Array, uint8ArrayToHex } from '@/utils/arrayBuffer'
+import { computed, ref } from 'vue'
 
 const STORAGE_KEY = 'biometric_credential'
 const CREDENTIAL_ID_KEY = 'credential_id'
@@ -17,17 +17,16 @@ export function useBiometrics() {
   // 检查是否支持 WebAuthn API
   const checkSupport = async () => {
     try {
-      isSupported.value = 
-        'credentials' in navigator &&
-        'create' in navigator.credentials &&
-        'get' in navigator.credentials &&
-        typeof PublicKeyCredential !== 'undefined'
-      
+      isSupported.value = 'credentials' in navigator
+        && 'create' in navigator.credentials
+        && 'get' in navigator.credentials
+        && typeof PublicKeyCredential !== 'undefined'
+
       if (isSupported.value) {
         const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
         isSupported.value = available
       }
-      
+
       // 检查是否已注册
       const stored = localStorage.getItem(CREDENTIAL_ID_KEY)
       isRegistered.value = !!stored
@@ -52,32 +51,32 @@ export function useBiometrics() {
 
       // 生成随机挑战
       const challenge = generateRandomBytes(32)
-      
+
       // 创建凭据
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
           rp: {
             name: '智能门锁控制面板',
-            id: window.location.hostname
+            id: window.location.hostname,
           },
           user: {
             id: generateRandomBytes(32),
             name: 'user@doorlock.local',
-            displayName: '门锁用户'
+            displayName: '门锁用户',
           },
           pubKeyCredParams: [
             { alg: -7, type: 'public-key' }, // ES256
-            { alg: -257, type: 'public-key' }  // RS256
+            { alg: -257, type: 'public-key' }, // RS256
           ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
             userVerification: 'required',
-            requireResidentKey: false
+            requireResidentKey: false,
           },
           timeout: 60000,
-          attestation: 'none'
-        }
+          attestation: 'none',
+        },
       }) as PublicKeyCredential
 
       if (!credential) {
@@ -91,7 +90,7 @@ export function useBiometrics() {
         new TextEncoder().encode('door-lock-biometric-key-2024'), // 固定的本地密钥材料
         { name: 'PBKDF2' },
         false,
-        ['deriveKey']
+        ['deriveKey'],
       )
 
       const wrappingKey = await crypto.subtle.deriveKey(
@@ -99,15 +98,15 @@ export function useBiometrics() {
           name: 'PBKDF2',
           salt: new TextEncoder().encode('door-lock-salt'),
           iterations: 100000,
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         },
         keyMaterial,
         {
           name: 'AES-GCM',
-          length: 256
+          length: 256,
         },
         false,
-        ['wrapKey']
+        ['wrapKey'],
       )
 
       // 创建临时密钥以包装原始密钥
@@ -116,7 +115,7 @@ export function useBiometrics() {
         keyToWrap,
         { name: 'AES-GCM' },
         true,
-        ['encrypt', 'decrypt']
+        ['encrypt', 'decrypt'],
       )
 
       // 生成随机 IV
@@ -129,20 +128,20 @@ export function useBiometrics() {
         wrappingKey,
         {
           name: 'AES-GCM',
-          iv
-        }
+          iv,
+        },
       )
 
       // 保存凭据信息
       const credentialData: BiometricCredential = {
         credentialId: uint8ArrayToHex(new Uint8Array(credential.rawId)),
         wrappedKey: uint8ArrayToHex(new Uint8Array(wrappedKey)),
-        iv: uint8ArrayToHex(iv)
+        iv: uint8ArrayToHex(iv),
       }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(credentialData))
       localStorage.setItem(CREDENTIAL_ID_KEY, credentialData.credentialId)
-      
+
       isRegistered.value = true
     } catch (err) {
       error.value = err instanceof Error ? err.message : '注册生物识别认证失败'
@@ -181,11 +180,11 @@ export function useBiometrics() {
           allowCredentials: [{
             id: hexToUint8Array(credentialData.credentialId),
             type: 'public-key',
-            transports: ['internal']
+            transports: ['internal'],
           }],
           userVerification: 'required',
-          timeout: 60000
-        }
+          timeout: 60000,
+        },
       }) as PublicKeyCredential
 
       if (!assertion) {
@@ -196,7 +195,7 @@ export function useBiometrics() {
       // 由于WebAuthn的限制，我们简化处理：
       // 实际的密钥应该通过服务器验证签名后返回，或者使用其他安全存储方案
       // 这里我们直接从加密存储中解密密钥（需要用户输入密码或使用设备密钥）
-      
+
       // 临时解决方案：使用固定的本地包装密钥
       // 在生产环境中，应该使用更安全的密钥派生方案
       const keyMaterial = await crypto.subtle.importKey(
@@ -204,7 +203,7 @@ export function useBiometrics() {
         new TextEncoder().encode('door-lock-biometric-key-2024'), // 固定的本地密钥材料
         { name: 'PBKDF2' },
         false,
-        ['deriveKey']
+        ['deriveKey'],
       )
 
       const wrappingKey = await crypto.subtle.deriveKey(
@@ -212,15 +211,15 @@ export function useBiometrics() {
           name: 'PBKDF2',
           salt: new TextEncoder().encode('door-lock-salt'),
           iterations: 100000,
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         },
         keyMaterial,
         {
           name: 'AES-GCM',
-          length: 256
+          length: 256,
         },
         false,
-        ['unwrapKey']
+        ['unwrapKey'],
       )
 
       // 解包密钥
@@ -230,11 +229,11 @@ export function useBiometrics() {
         wrappingKey,
         {
           name: 'AES-GCM',
-          iv: hexToUint8Array(credentialData.iv)
+          iv: hexToUint8Array(credentialData.iv),
         },
         { name: 'AES-GCM' },
         true,
-        ['encrypt', 'decrypt']
+        ['encrypt', 'decrypt'],
       )
 
       // 导出为原始字节
@@ -274,6 +273,6 @@ export function useBiometrics() {
     register,
     authenticateAndUnwrap,
     clearBiometrics,
-    checkSupport
+    checkSupport,
   }
 }

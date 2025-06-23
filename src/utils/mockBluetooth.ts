@@ -16,10 +16,10 @@ export class MockBluetoothLock implements MockBluetoothDevice {
 
   async connect(): Promise<boolean> {
     console.log('模拟设备：开始连接...')
-    
+
     // 模拟连接延迟
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     this.connected = true
     console.log('模拟设备：连接成功')
     return true
@@ -36,7 +36,7 @@ export class MockBluetoothLock implements MockBluetoothDevice {
     }
 
     console.log('模拟设备：开始验证密码...')
-    
+
     // 模拟验证延迟
     await new Promise(resolve => setTimeout(resolve, 500))
 

@@ -1,4 +1,4 @@
-import { defineConfig, presetAttributify, presetUno, presetIcons } from 'unocss'
+import { defineConfig, presetAttributify, presetIcons, presetUno } from 'unocss'
 
 export default defineConfig({
   presets: [
@@ -6,8 +6,8 @@ export default defineConfig({
     presetAttributify(),
     presetIcons({
       scale: 1.2,
-      warn: true
-    })
+      warn: true,
+    }),
   ],
   theme: {
     colors: {
@@ -22,8 +22,8 @@ export default defineConfig({
         700: '#1154a0',
         800: '#0d47a1',
         900: '#0a3d62',
-      }
-    }
+      },
+    },
   },
   shortcuts: {
     'btn': 'px-4 py-2 rounded-lg font-medium transition-all duration-200',
@@ -31,6 +31,7 @@ export default defineConfig({
     'btn-secondary': 'btn bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400',
     'btn-warning': 'btn bg-yellow-500 text-white hover:bg-yellow-600 active:bg-yellow-700',
     'card': 'bg-white rounded-lg shadow-md p-6 border border-gray-200',
-    'input': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent'
-  }
+    'input':
+      'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+  },
 })

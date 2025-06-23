@@ -12,6 +12,7 @@
 ### 1. 连接状态管理优化
 
 添加了连接控制状态变量：
+
 - `connectionAttemptInProgress`: 防止并发连接
 - `lastConnectionAttempt`: 记录上次连接时间
 - `reconnectionDebounceTimer`: 防抖定时器
@@ -22,7 +23,7 @@
 ```typescript
 const debouncedReconnect = (device: BluetoothDevice, rssi: number) => {
   const now = Date.now()
-  
+
   // 防止频繁重连：至少间隔3秒
   if (now - lastConnectionAttempt < 3000) {
     console.log('连接尝试间隔太短，跳过此次重连')
@@ -31,7 +32,7 @@ const debouncedReconnect = (device: BluetoothDevice, rssi: number) => {
 
   // 根据信号强度调整防抖延时
   const debounceDelay = rssi > -60 ? 500 : rssi > -80 ? 1000 : 2000
-  
+
   // 设置防抖定时器
   reconnectionDebounceTimer = window.setTimeout(async () => {
     if (!connectionState.value.isConnected && !connectionAttemptInProgress) {
@@ -43,9 +44,10 @@ const debouncedReconnect = (device: BluetoothDevice, rssi: number) => {
 ```
 
 **优势：**
+
 - 根据信号强度动态调整重连延时
 - 强信号(>-60dBm)：500ms 延时
-- 中等信号(-60~-80dBm)：1000ms 延时  
+- 中等信号(-60~-80dBm)：1000ms 延时
 - 弱信号(<-80dBm)：2000ms 延时
 
 ### 3. 防重复弹窗机制
@@ -81,7 +83,7 @@ const smartConnect = async (): Promise<boolean> => {
 const autoConnect = async (silent = false) => {
   // 首先尝试已授权设备（静默模式）
   const success = await bluetooth.value.connectToAuthorizedDevice()
-  
+
   if (success) {
     if (!silent) toast.success('自动连接成功！')
     // 启动广告监听
@@ -111,7 +113,7 @@ const stopAdvertisementWatching = () => {
     advertisementWatcher.abort()
     advertisementWatcher = null
   }
-  
+
   // 重置所有连接状态
   isWatchingAdvertisements.value = false
   autoReconnectEnabled.value = false

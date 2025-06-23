@@ -1,13 +1,13 @@
-import { ref, computed } from 'vue'
-import type { BluetoothConnectionState, ChallengeResponse, UnlockResult } from '@/types'
-import { uint8ArrayToWordArray, wordArrayToUint8Array, uint8ArrayToHex } from '@/utils/arrayBuffer'
 import { encryptChallenge } from '@/services/crypto'
+import type { BluetoothConnectionState, ChallengeResponse, UnlockResult } from '@/types'
+import { uint8ArrayToHex, uint8ArrayToWordArray, wordArrayToUint8Array } from '@/utils/arrayBuffer'
+import { computed, ref } from 'vue'
 
 // 蓝牙服务配置 - 与 ESP32 端保持一致
 const BLUETOOTH_CONFIG = {
   serviceUUID: '1f04f3b3-0000-63b0-b612-3a8b9fe101ab',
   challengeCharacteristicUUID: '1f04f3b3-0002-63b0-b612-3a8b9fe101ab', // Read/Notify
-  responseCharacteristicUUID: '1f04f3b3-0001-63b0-b612-3a8b9fe101ab'   // Write
+  responseCharacteristicUUID: '1f04f3b3-0001-63b0-b612-3a8b9fe101ab', // Write
 }
 
 // 存储设备标识符的本地存储键
@@ -23,7 +23,7 @@ export function useBluetoothLock() {
     isConnected: false,
     isConnecting: false,
     device: null,
-    error: null
+    error: null,
   })
 
   const isUnlocking = ref(false)
@@ -64,7 +64,7 @@ export function useBluetoothLock() {
   /**
    * 获取已保存的授权设备列表
    */
-  const getSavedAuthorizedDevices = (): Array<{id: string, name?: string, savedAt: number}> => {
+  const getSavedAuthorizedDevices = (): Array<{ id: string; name?: string; savedAt: number }> => {
     try {
       const saved = localStorage.getItem(SAVED_DEVICES_KEY)
       return saved ? JSON.parse(saved) : []
@@ -83,7 +83,7 @@ export function useBluetoothLock() {
       const deviceInfo = {
         id: device.id,
         name: device.name,
-        savedAt: Date.now()
+        savedAt: Date.now(),
       }
 
       // 检查设备是否已存在，存在则更新时间戳
@@ -113,10 +113,10 @@ export function useBluetoothLock() {
     try {
       const devices = await (navigator.bluetooth as any).getDevices()
       console.log('获取到已授权设备:', devices.length)
-      
+
       // 获取之前保存的设备信息
       const savedDevices = getSavedAuthorizedDevices()
-      
+
       // 优先返回之前保存过的设备，如果没有则返回支持我们服务的设备
       const filteredDevices = devices.filter((device: BluetoothDevice) => {
         // 首先检查是否是之前保存的设备
@@ -125,7 +125,7 @@ export function useBluetoothLock() {
           console.log('找到已保存的授权设备:', device.name)
           return true
         }
-        
+
         // 如果没有保存的设备，检查是否支持我们的服务
         // 注意：这里只能基于设备的基本信息判断，无法直接检查服务
         return device.gatt && device.name
@@ -146,7 +146,7 @@ export function useBluetoothLock() {
    */
   const debouncedReconnect = (device: BluetoothDevice, rssi: number) => {
     const now = Date.now()
-    
+
     // 防止频繁重连：至少间隔3秒
     if (now - lastConnectionAttempt < 3000) {
       console.log('连接尝试间隔太短，跳过此次重连')
@@ -201,13 +201,13 @@ export function useBluetoothLock() {
       for (const device of authorizedDevices) {
         try {
           await (device as any).watchAdvertisements({
-            signal: advertisementWatcher.signal
+            signal: advertisementWatcher.signal,
           })
 
           device.addEventListener('advertisementreceived', (event: any) => {
             const rssi = event.rssi || -100
             console.log(`收到设备广告: ${event.device.name}, RSSI: ${rssi}dBm`)
-            
+
             // 只有在未连接且未在连接中时才尝试自动连接
             if (!connectionState.value.isConnected && !connectionState.value.isConnecting) {
               debouncedReconnect(event.device, rssi)
@@ -222,7 +222,7 @@ export function useBluetoothLock() {
 
       // 保存监听状态
       localStorage.setItem(ADVERTISEMENT_WATCH_KEY, 'true')
-      
+
       return true
     } catch (err) {
       console.error('启动广告监听失败:', err)
@@ -246,15 +246,15 @@ export function useBluetoothLock() {
       advertisementWatcher.abort()
       advertisementWatcher = null
     }
-    
+
     isWatchingAdvertisements.value = false
     autoReconnectEnabled.value = false
     connectionAttemptInProgress = false
     deviceSelectionInProgress = false
-    
+
     // 清除存储状态
     localStorage.removeItem(ADVERTISEMENT_WATCH_KEY)
-    
+
     console.log('已停止广告监听')
   }
 
@@ -284,7 +284,7 @@ export function useBluetoothLock() {
       const deviceInfo = {
         id: device.id,
         name: device.name,
-        savedAt: Date.now()
+        savedAt: Date.now(),
       }
       localStorage.setItem(SAVED_DEVICE_KEY, JSON.stringify(deviceInfo))
       console.log('设备信息已保存:', deviceInfo)
@@ -311,7 +311,7 @@ export function useBluetoothLock() {
    */
   const connectToAuthorizedDevice = async (): Promise<boolean> => {
     const authorizedDevices = await getAuthorizedDevices()
-    
+
     if (authorizedDevices.length === 0) {
       console.log('没有找到已授权的门锁设备')
       return false
@@ -346,7 +346,10 @@ export function useBluetoothLock() {
    * @param device 要连接的蓝牙设备
    * @param autoConnect 是否为自动连接（影响错误处理和日志）
    */
-  const connectToSpecificDevice = async (device: BluetoothDevice, autoConnect = false): Promise<boolean> => {
+  const connectToSpecificDevice = async (
+    device: BluetoothDevice,
+    autoConnect = false,
+  ): Promise<boolean> => {
     try {
       // 防止并发连接
       if (connectionAttemptInProgress) {
@@ -367,54 +370,57 @@ export function useBluetoothLock() {
 
       // 连接到 GATT 服务器
       const server = await device.gatt.connect()
-      
+
       // 获取服务
       service = await server.getPrimaryService(BLUETOOTH_CONFIG.serviceUUID)
-      
+
       // 获取特征
       challengeCharacteristic = await service.getCharacteristic(
-        BLUETOOTH_CONFIG.challengeCharacteristicUUID
+        BLUETOOTH_CONFIG.challengeCharacteristicUUID,
       )
       responseCharacteristic = await service.getCharacteristic(
-        BLUETOOTH_CONFIG.responseCharacteristicUUID
+        BLUETOOTH_CONFIG.responseCharacteristicUUID,
       )
 
       // 启用挑战通知
       await challengeCharacteristic.startNotifications()
-      challengeCharacteristic.addEventListener('characteristicvaluechanged', handleChallengeReceived)
+      challengeCharacteristic.addEventListener(
+        'characteristicvaluechanged',
+        handleChallengeReceived,
+      )
 
       // 更新连接状态
       connectionState.value = {
         isConnected: true,
         isConnecting: false,
         device,
-        error: null
+        error: null,
       }
 
       // 保存设备信息
       saveDeviceInfo(device)
-      
+
       // 保存到授权设备列表
       saveAuthorizedDevice(device)
 
       const logMessage = autoConnect ? '自动连接成功' : '蓝牙连接成功'
       console.log(`${logMessage}:`, device.name)
-      
+
       // 自动请求一个挑战
       setTimeout(async () => {
         await requestNewChallenge()
       }, 500)
-      
+
       return true
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '连接失败'
       connectionState.value = {
         isConnected: false,
-        isConnecting: false,  
+        isConnecting: false,
         device: null,
-        error: errorMessage
+        error: errorMessage,
       }
-      
+
       if (!autoConnect) {
         console.error('连接到指定设备失败:', err)
       } else {
@@ -451,17 +457,17 @@ export function useBluetoothLock() {
 
     // 如果没有已授权设备或连接失败，则弹出设备选择
     console.log('尝试通过设备选择器连接...')
-    
+
     try {
       deviceSelectionInProgress = true
       const manualSuccess = await connect()
-      
+
       // 手动连接成功后也启动广告监听
       if (manualSuccess && checkWebBluetoothSupport() && !isWatchingAdvertisements.value) {
         console.log('手动连接成功，启动广告监听...')
         setTimeout(() => startAdvertisementWatching(), 1000)
       }
-      
+
       return manualSuccess
     } finally {
       deviceSelectionInProgress = false
@@ -481,9 +487,9 @@ export function useBluetoothLock() {
       // 请求蓝牙设备
       const device = await navigator.bluetooth.requestDevice({
         filters: [{
-          services: [BLUETOOTH_CONFIG.serviceUUID]
+          services: [BLUETOOTH_CONFIG.serviceUUID],
         }],
-        optionalServices: [BLUETOOTH_CONFIG.serviceUUID]
+        optionalServices: [BLUETOOTH_CONFIG.serviceUUID],
       })
 
       return await connectToSpecificDevice(device)
@@ -491,9 +497,9 @@ export function useBluetoothLock() {
       const errorMessage = err instanceof Error ? err.message : '连接失败'
       connectionState.value = {
         isConnected: false,
-        isConnecting: false,  
+        isConnecting: false,
         device: null,
-        error: errorMessage
+        error: errorMessage,
       }
       console.error('蓝牙连接失败:', err)
       return false
@@ -511,7 +517,7 @@ export function useBluetoothLock() {
       // 清理连接状态
       connectionAttemptInProgress = false
       deviceSelectionInProgress = false
-      
+
       // 清理定时器
       if (reconnectionDebounceTimer) {
         clearTimeout(reconnectionDebounceTimer)
@@ -519,7 +525,10 @@ export function useBluetoothLock() {
       }
 
       if (challengeCharacteristic) {
-        challengeCharacteristic.removeEventListener('characteristicvaluechanged', handleChallengeReceived)
+        challengeCharacteristic.removeEventListener(
+          'characteristicvaluechanged',
+          handleChallengeReceived,
+        )
         // 只有在设备仍连接时才尝试停止通知
         if (connectionState.value.device?.gatt?.connected) {
           challengeCharacteristic.stopNotifications().catch(console.error)
@@ -545,7 +554,7 @@ export function useBluetoothLock() {
         isConnected: false,
         isConnecting: false,
         device: null,
-        error: null
+        error: null,
       }
     }
   }
@@ -564,16 +573,16 @@ export function useBluetoothLock() {
   const handleChallengeReceived = (event: Event) => {
     const target = event.target as unknown as BluetoothRemoteGATTCharacteristic
     const value = target.value
-    
+
     console.log('收到挑战事件，数据长度:', value?.byteLength || 0)
-    
+
     if (value && value.byteLength === 8) {
       const challengeBytes = new Uint8Array(value.buffer)
       lastChallenge.value = {
         challenge: challengeBytes,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
-      
+
       console.log('接收到有效挑战:', uint8ArrayToHex(challengeBytes))
     } else {
       console.warn('收到无效挑战数据，长度:', value?.byteLength || 0)
@@ -589,7 +598,7 @@ export function useBluetoothLock() {
       return {
         success: false,
         error: '设备未连接',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     }
 
@@ -604,18 +613,18 @@ export function useBluetoothLock() {
           return {
             success: false,
             error: '无法获取挑战数据',
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }
         }
-        
+
         // 等待挑战响应
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         if (!lastChallenge.value) {
           return {
             success: false,
             error: '挑战数据获取超时',
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }
         }
       }
@@ -626,12 +635,12 @@ export function useBluetoothLock() {
 
       // 使用 AES-ECB 加密挑战
       const encryptedChallenge = encryptChallenge(challengeWordArray, keyWordArray)
-      
+
       // 转换为 Uint8Array 并发送
       const responseBytes = wordArrayToUint8Array(encryptedChallenge)
-      
+
       console.log('发送加密响应:', uint8ArrayToHex(responseBytes))
-      
+
       await responseCharacteristic.writeValue(responseBytes)
 
       // 清除已使用的挑战
@@ -639,7 +648,7 @@ export function useBluetoothLock() {
 
       return {
         success: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '开锁失败'
@@ -647,7 +656,7 @@ export function useBluetoothLock() {
       return {
         success: false,
         error: errorMessage,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     } finally {
       isUnlocking.value = false
@@ -659,7 +668,12 @@ export function useBluetoothLock() {
    */
   const requestNewChallenge = async (): Promise<boolean> => {
     if (!connectionState.value.isConnected || !challengeCharacteristic) {
-      console.log('无法请求挑战，连接状态:', connectionState.value.isConnected, '特征:', !!challengeCharacteristic)
+      console.log(
+        '无法请求挑战，连接状态:',
+        connectionState.value.isConnected,
+        '特征:',
+        !!challengeCharacteristic,
+      )
       return false
     }
 
@@ -668,12 +682,12 @@ export function useBluetoothLock() {
       // 读取当前挑战值，这会触发 characteristicvaluechanged 事件
       const value = await challengeCharacteristic.readValue()
       console.log('挑战读取成功，长度:', value.byteLength)
-      
+
       // 手动触发处理函数，因为有时候事件不会自动触发
       if (value.byteLength > 0) {
         handleChallengeReceived({ target: { value } } as any)
       }
-      
+
       return true
     } catch (err) {
       console.error('请求新挑战失败:', err)
@@ -689,13 +703,13 @@ export function useBluetoothLock() {
       const savedDevices = getSavedAuthorizedDevices()
       const filteredDevices = savedDevices.filter(d => d.id !== deviceId)
       localStorage.setItem(SAVED_DEVICES_KEY, JSON.stringify(filteredDevices))
-      
+
       // 如果删除的是当前保存的设备，也清除该记录
       const savedInfo = getSavedDeviceInfo()
       if (savedInfo && savedInfo.id === deviceId) {
         localStorage.removeItem(SAVED_DEVICE_KEY)
       }
-      
+
       console.log('已移除授权设备:', deviceId)
       return true
     } catch (err) {
@@ -727,11 +741,11 @@ export function useBluetoothLock() {
   const hasChallenge = computed(() => !!lastChallenge.value)
   const canUnlock = computed(() => {
     const result = isConnected.value && hasChallenge.value && !isUnlocking.value
-    console.log('canUnlock computed:', { 
-      isConnected: isConnected.value, 
-      hasChallenge: hasChallenge.value, 
+    console.log('canUnlock computed:', {
+      isConnected: isConnected.value,
+      hasChallenge: hasChallenge.value,
       isUnlocking: isUnlocking.value,
-      result 
+      result,
     })
     return result
   })
@@ -763,6 +777,6 @@ export function useBluetoothLock() {
     stopAdvertisementWatching,
     checkAutoStartWatching,
     removeAuthorizedDevice,
-    clearAllAuthorizedDevices
+    clearAllAuthorizedDevices,
   }
 }

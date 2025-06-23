@@ -1,5 +1,5 @@
-import { ref, computed } from 'vue'
 import type { ToastMessage } from '@/types'
+import { computed, ref } from 'vue'
 
 const toasts = ref<ToastMessage[]>([])
 let toastIdCounter = 0
@@ -14,14 +14,14 @@ export function useToast() {
   const showToast = (
     message: string,
     type: ToastMessage['type'] = 'info',
-    duration = 3000
+    duration = 3000,
   ) => {
     const id = `toast-${++toastIdCounter}`
     const toast: ToastMessage = {
       id,
       type,
       message,
-      duration
+      duration,
     }
 
     toasts.value.push(toast)
@@ -89,6 +89,6 @@ export function useToast() {
     success,
     error,
     warning,
-    info
+    info,
   }
 }

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 // 简化的 Store 测试 - 主要测试状态管理逻辑
 describe('LockStore - 基础功能测试', () => {
@@ -18,8 +18,8 @@ describe('LockStore - 基础功能测试', () => {
           isConnected: false,
           isConnecting: false,
           device: null,
-          error: null
-        }
+          error: null,
+        },
       }
 
       expect(mockLockState.isUnlocking).toBe(false)
@@ -31,7 +31,7 @@ describe('LockStore - 基础功能测试', () => {
     it('应该验证认证模式类型', () => {
       const mockAuthMode = {
         type: 'manual' as const,
-        isEnabled: true
+        isEnabled: true,
       }
 
       expect(mockAuthMode.type).toBe('manual')
@@ -41,7 +41,7 @@ describe('LockStore - 基础功能测试', () => {
     it('应该验证设备设置类型', () => {
       const mockDeviceSettings = {
         autoConnect: false,
-        biometricEnabled: false
+        biometricEnabled: false,
       }
 
       expect(mockDeviceSettings.autoConnect).toBe(false)
@@ -54,7 +54,7 @@ describe('LockStore - 基础功能测试', () => {
       const connectionStates = [
         { isConnected: true, isConnecting: false, device: null, error: null },
         { isConnected: false, isConnecting: true, device: null, error: null },
-        { isConnected: false, isConnecting: false, device: null, error: '连接失败' }
+        { isConnected: false, isConnecting: false, device: null, error: '连接失败' },
       ]
 
       for (const state of connectionStates) {
@@ -69,7 +69,7 @@ describe('LockStore - 基础功能测试', () => {
     it('应该处理开锁结果数据结构', () => {
       const mockUnlockResults = [
         { success: true, timestamp: Date.now() },
-        { success: false, error: '设备未连接', timestamp: Date.now() }
+        { success: false, error: '设备未连接', timestamp: Date.now() },
       ]
 
       for (const result of mockUnlockResults) {
@@ -93,7 +93,7 @@ describe('LockStore - 基础功能测试', () => {
       const settings = {
         autoConnect: true,
         biometricEnabled: false,
-        preferredDeviceId: 'test-device'
+        preferredDeviceId: 'test-device',
       }
 
       const serialized = JSON.stringify(settings)
@@ -109,7 +109,7 @@ describe('LockStore - 基础功能测试', () => {
         '设备未连接',
         '密码错误',
         '生物识别不可用',
-        '连接超时'
+        '连接超时',
       ]
 
       for (const error of errors) {

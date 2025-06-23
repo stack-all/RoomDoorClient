@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { usePWA } from '@/composables/usePWA'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('usePWA Composable - 极简版本', () => {
   beforeEach(() => {
@@ -15,10 +15,10 @@ describe('usePWA Composable - 极简版本', () => {
     it('应该处理安装功能', async () => {
       // 模拟一个简单的安装场景
       const mockInstall = vi.fn().mockResolvedValue(false)
-      
+
       // 验证安装函数类型
       expect(typeof mockInstall).toBe('function')
-      
+
       // 测试无 prompt 时的行为
       const result = await mockInstall()
       expect(result).toBe(false)
@@ -30,7 +30,7 @@ describe('usePWA Composable - 极简版本', () => {
       // 测试 PWA 相关功能的基本结构
       const mockCanInstall = { value: false }
       const mockInstallPrompt = null
-      
+
       expect(typeof mockCanInstall.value).toBe('boolean')
       expect(mockInstallPrompt).toBe(null)
     })

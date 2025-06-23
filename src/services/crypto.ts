@@ -18,14 +18,14 @@ export function deriveKey(password: string): CryptoJS.lib.WordArray {
  * @returns 加密后的密文 WordArray
  */
 export function encryptChallenge(
-  challenge: CryptoJS.lib.WordArray, 
-  key: CryptoJS.lib.WordArray
+  challenge: CryptoJS.lib.WordArray,
+  key: CryptoJS.lib.WordArray,
 ): CryptoJS.lib.WordArray {
   const encrypted = CryptoJS.AES.encrypt(challenge, key, {
     mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.Pkcs7
+    padding: CryptoJS.pad.Pkcs7,
   })
-  
+
   return encrypted.ciphertext
 }
 
@@ -37,17 +37,17 @@ export function encryptChallenge(
  */
 export function decryptData(
   ciphertext: CryptoJS.lib.WordArray,
-  key: CryptoJS.lib.WordArray
+  key: CryptoJS.lib.WordArray,
 ): CryptoJS.lib.WordArray {
   const decrypted = CryptoJS.AES.decrypt(
     { ciphertext } as CryptoJS.lib.CipherParams,
     key,
     {
       mode: CryptoJS.mode.ECB,
-      padding: CryptoJS.pad.Pkcs7
-    }
+      padding: CryptoJS.pad.Pkcs7,
+    },
   )
-  
+
   return decrypted
 }
 

@@ -9,13 +9,13 @@ export function wordArrayToUint8Array(wordArray: CryptoJS.lib.WordArray): Uint8A
   const words = wordArray.words
   const sigBytes = wordArray.sigBytes
   const bytes = new Uint8Array(sigBytes)
-  
+
   for (let i = 0; i < sigBytes; i++) {
     const wordIndex = Math.floor(i / 4)
     const byteIndex = i % 4
     bytes[i] = (words[wordIndex] >>> (24 - byteIndex * 8)) & 0xff
   }
-  
+
   return bytes
 }
 
@@ -27,7 +27,7 @@ export function wordArrayToUint8Array(wordArray: CryptoJS.lib.WordArray): Uint8A
 export function uint8ArrayToWordArray(uint8Array: Uint8Array): CryptoJS.lib.WordArray {
   const words: number[] = []
   const len = uint8Array.length
-  
+
   for (let i = 0; i < len; i += 4) {
     let word = 0
     for (let j = 0; j < 4 && i + j < len; j++) {
@@ -35,10 +35,10 @@ export function uint8ArrayToWordArray(uint8Array: Uint8Array): CryptoJS.lib.Word
     }
     words.push(word)
   }
-  
+
   return {
     words,
-    sigBytes: len
+    sigBytes: len,
   } as CryptoJS.lib.WordArray
 }
 
@@ -50,11 +50,11 @@ export function uint8ArrayToWordArray(uint8Array: Uint8Array): CryptoJS.lib.Word
 export function hexToUint8Array(hex: string): Uint8Array {
   const cleanHex = hex.replace(/[^0-9a-fA-F]/g, '')
   const bytes = new Uint8Array(cleanHex.length / 2)
-  
+
   for (let i = 0; i < bytes.length; i++) {
     bytes[i] = Number.parseInt(cleanHex.substr(i * 2, 2), 16)
   }
-  
+
   return bytes
 }
 

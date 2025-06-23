@@ -1,7 +1,7 @@
-import { ref, computed } from 'vue'
-import type { BluetoothConnectionState, UnlockResult, ChallengeResponse } from '@/types'
-import { mockDevice } from '@/utils/mockBluetooth'
+import type { BluetoothConnectionState, ChallengeResponse, UnlockResult } from '@/types'
 import { generateRandomBytes, uint8ArrayToHex } from '@/utils/arrayBuffer'
+import { mockDevice } from '@/utils/mockBluetooth'
+import { computed, ref } from 'vue'
 
 /**
  * 模拟蓝牙锁连接器
@@ -12,7 +12,7 @@ export function useMockBluetoothLock() {
     isConnected: false,
     isConnecting: false,
     device: null,
-    error: null
+    error: null,
   })
 
   const isUnlocking = ref(false)
@@ -40,7 +40,7 @@ export function useMockBluetoothLock() {
           isConnected: true,
           isConnecting: false,
           device: { name: '模拟设备 ESP32_BLE_Server' } as BluetoothDevice,
-          error: null
+          error: null,
         }
 
         // 自动生成一个模拟挑战
@@ -59,7 +59,7 @@ export function useMockBluetoothLock() {
         isConnected: false,
         isConnecting: false,
         device: null,
-        error: errorMessage
+        error: errorMessage,
       }
       console.error('模拟蓝牙连接失败:', err)
       return false
@@ -80,7 +80,7 @@ export function useMockBluetoothLock() {
         isConnected: false,
         isConnecting: false,
         device: null,
-        error: null
+        error: null,
       }
     }
   }
@@ -92,7 +92,7 @@ export function useMockBluetoothLock() {
     const challengeBytes = generateRandomBytes(8)
     lastChallenge.value = {
       challenge: challengeBytes,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
     console.log('模拟蓝牙：生成挑战', uint8ArrayToHex(challengeBytes))
   }
@@ -105,7 +105,7 @@ export function useMockBluetoothLock() {
       return {
         success: false,
         error: '设备未连接',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     }
 
@@ -118,24 +118,29 @@ export function useMockBluetoothLock() {
       }
 
       console.log('模拟蓝牙：开始开锁操作')
-      
+
       // 对于模拟模式，我们简化验证过程
       // 将AES密钥转换为十六进制字符串，然后取前6位作为密码
       let passwordFromKey: string
-      
+
       if (aesKey.length >= 3) {
         // 将前3字节转换为十六进制，取前6位数字作为密码
         const hexKey = Array.from(aesKey.slice(0, 3))
           .map(byte => byte.toString(16).padStart(2, '0'))
           .join('')
-        
+
         // 取前6位数字字符作为密码
         passwordFromKey = hexKey.slice(0, 6)
-        
+
         // 确保都是数字，如果有字母则替换为数字
         passwordFromKey = passwordFromKey.replace(/[a-f]/g, (match) => {
           const charMap: { [key: string]: string } = {
-            'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6'
+            'a': '1',
+            'b': '2',
+            'c': '3',
+            'd': '4',
+            'e': '5',
+            'f': '6',
           }
           return charMap[match] || '0'
         })
@@ -143,15 +148,15 @@ export function useMockBluetoothLock() {
         // 如果密钥太短，使用默认测试密码
         passwordFromKey = '123456'
       }
-      
+
       console.log('模拟蓝牙：使用密码验证:', passwordFromKey)
-      
+
       const result = await mockDevice.unlock(passwordFromKey)
-      
+
       if (result.success) {
         // 清除已使用的挑战
         lastChallenge.value = null
-        
+
         // 生成新挑战供下次使用
         setTimeout(() => {
           generateMockChallenge()
@@ -161,7 +166,7 @@ export function useMockBluetoothLock() {
       return {
         success: result.success,
         error: result.error,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '开锁失败'
@@ -169,7 +174,7 @@ export function useMockBluetoothLock() {
       return {
         success: false,
         error: errorMessage,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
     } finally {
       isUnlocking.value = false
@@ -234,7 +239,7 @@ export function useMockBluetoothLock() {
   const getSavedAuthorizedDevices = () => {
     console.log('模拟蓝牙：获取保存的授权设备')
     return [
-      { id: 'mock-device-1', name: '模拟设备 ESP32_BLE_Server', savedAt: Date.now() }
+      { id: 'mock-device-1', name: '模拟设备 ESP32_BLE_Server', savedAt: Date.now() },
     ]
   }
 
@@ -271,11 +276,11 @@ export function useMockBluetoothLock() {
   const hasChallenge = computed(() => !!lastChallenge.value)
   const canUnlock = computed(() => {
     const result = isConnected.value && hasChallenge.value && !isUnlocking.value
-    console.log('模拟蓝牙 canUnlock:', { 
-      isConnected: isConnected.value, 
-      hasChallenge: hasChallenge.value, 
+    console.log('模拟蓝牙 canUnlock:', {
+      isConnected: isConnected.value,
+      hasChallenge: hasChallenge.value,
       isUnlocking: isUnlocking.value,
-      result 
+      result,
     })
     return result
   })
@@ -305,6 +310,6 @@ export function useMockBluetoothLock() {
     connectToAuthorizedDevice,
     startAdvertisementWatching,
     stopAdvertisementWatching,
-    checkAutoStartWatching
+    checkAutoStartWatching,
   }
 }
